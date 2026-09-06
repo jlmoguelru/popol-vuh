@@ -54,8 +54,8 @@
 <div id="stage"><canvas id="cv" width="1280" height="720"></canvas></div>
 
 <div id="tbtns">
-  <div class="tgrp"><div class="tb" data-vk="l">◀</div><div class="tb" data-vk="r">▶</div></div>
-  <div class="tgrp"><div class="tb" data-vk="duck">Agach.</div><div class="tb" data-vk="shoot">Tiro</div><div class="tb" data-vk="jump">Salto</div></div>
+  <div class="tgrp"><div class="tb" data-vk="l">◀</div><div class="tb" data-vk="r">▶</div><div class="tb" data-vk="duck">Agach.</div></div>
+  <div class="tgrp"><div class="tb" data-vk="shoot">Tiro</div><div class="tb" data-vk="jump">Salto</div></div>
 </div>
 
 <div id="gira"><div class="g"></div><div>Gira el teléfono<br><small style="opacity:.65">el códice se lee a lo ancho</small></div></div>
@@ -81,11 +81,17 @@ const CVW=1280, CVH=720, GROUND=560, LEVEL=7536;
 
 /* ---------- resolución del lienzo (nítido en Retina) ---------- */
 let SCALE=1;
+/* Tope de supermuestreo. El coste de dibujar crece con el CUADRADO de la escala:
+   sin tope, una pantalla Retina grande pedía un búfer de 2560×1440 y el cuadro
+   se iba a 20 ms (por debajo de 50 fps). Por encima de 1,5 este arte no gana
+   nitidez visible, así que no compensa. En táctil se baja más, porque además
+   cada lámina pre-escalada ocupa memoria. */
+const SCALE_MAX=(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window)?1.25:1.5;
 function fitCanvas(){
   const r=cv.getBoundingClientRect();
   if(!r.width||!r.height) return;
   const dpr=Math.min(devicePixelRatio||1,2);
-  const s=Math.max(1, Math.min(r.width/CVW, r.height/CVH)*dpr);
+  const s=Math.max(1, Math.min(SCALE_MAX, Math.min(r.width/CVW, r.height/CVH)*dpr));
   const w=Math.round(CVW*s), h=Math.round(CVH*s);
   if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
   SCALE=w/CVW;
@@ -483,20 +489,29 @@ let foes=[], boss=null;
 let notice={txt:'',t:0};
 function say(txt,d){ notice={txt,t:d||2.2}; }
 
-/* avisos de aprendizaje: cada uno se enseña UNA vez, cuando toca */
+/* Avisos de aprendizaje: cada uno se enseña UNA vez, cuando toca. `tap` es el
+   mismo aviso para quien juega con los dedos: en el teléfono no hay barra
+   espaciadora y decir «pulsa ESPACIO» no ayudaba a nadie. */
 const PISTAS=[
-  {id:'mover',  txt:'A · D  o  ← →   para andar',            cond:()=>true, wait:1.2, dur:4},
-  {id:'salto',  txt:'ESPACIO  para saltar',                   cond:()=>t.x>620, dur:3.6},
-  {id:'tiro',   txt:'MANTÉN K  y suelta:  cerbatana',         cond:()=>foes.some(e=>e.hp>0&&Math.abs(e.x-t.x)<520), dur:4},
+  {id:'mover',  txt:'A · D  o  ← →   para andar', tap:'usa  ◀  ▶  para andar', cond:()=>true, wait:1.2, dur:4},
+  {id:'salto',  txt:'ESPACIO  para saltar',       tap:'toca  SALTO  para saltar', cond:()=>t.x>620, dur:3.6},
+  {id:'tiro',   txt:'MANTÉN K  y suelta:  cerbatana', tap:'MANTÉN  TIRO  y suelta:  cerbatana',
+   cond:()=>foes.some(e=>e.hp>0&&Math.abs(e.x-t.x)<520), dur:4},
   {id:'espalda',txt:'al alacrán sólo lo hieres POR LA ESPALDA', cond:()=>foes.some(e=>e.kind==='ala'&&e.hp>0&&Math.abs(e.x-t.x)<420), dur:4.5},
-  {id:'agacha', txt:'S  para agacharte:  única forma de darle a las arañas', cond:()=>foes.some(e=>e.kind==='ara'&&e.hp>0&&Math.abs(e.x-t.x)<420), dur:4.5},
+  {id:'agacha', txt:'S  para agacharte:  única forma de darle a las arañas',
+   tap:'AGACH.:  única forma de darle a las arañas',
+   cond:()=>foes.some(e=>e.kind==='ara'&&e.hp>0&&Math.abs(e.x-t.x)<420), dur:4.5},
 ];
+const textoPista=p=>(TOUCH&&p.tap)?p.tap:p.txt;
 let pistaI=0, pistaT=0;
 function updPistas(dt){
   if(pistaI>=PISTAS.length) return;
+  /* una pista no puede pisar un aviso importante que aún se está leyendo
+     (el del claro del nance se perdía justo al cruzar la niebla) */
+  if(notice.t>1.5) return;
   const p=PISTAS[pistaI];
   if(p.cond()){ pistaT+=dt;
-    if(pistaT>=(p.wait||0)){ say(p.txt,p.dur); pistaI++; pistaT=0; } }
+    if(pistaT>=(p.wait||0)){ say(textoPista(p),p.dur); pistaI++; pistaT=0; } }
 }
 
 /* ================= ENEMIGOS ================= */
@@ -525,10 +540,15 @@ function spawnFoes(){
 const BOSSX=7060, CANOPY_Y=215, BOSS_H=170;
 const HOVER_Y=GROUND-230, DIVE_V=520, DIVE_FLOOR=GROUND-50;
 const ARENA_L=6180, ARENA_R=LEVEL-110;
+/* La pelea tiene tope de reloj. Si alguien falla mucho, el encuentro se eternizaba
+   y la cinemática del brazo —que es el momento del mito— no llegaba nunca. Con esto
+   el relato avanza pase lo que pase: el brazo como muy tarde al minuto, y el falso
+   sol cae poco después. Quien apunta bien llega mucho antes por daño. */
+const T_BRAZO=55, T_CAIDA=105;
 function spawnBoss(){
   boss={x:BOSSX,y:CANOPY_Y,vx:0,vy:0,face:-1,hp:300,maxhp:300,
         state:'canopy',t:0,st:0,wt:3.2,active:false,hitCd:0,next:'dive',armCine:false,
-        dead:false,deadT:0,tx:0,ty:0,gustN:0,rugidoT:0};
+        dead:false,deadT:0,tx:0,ty:0,gustN:0,fightT:0};
   feathers.length=0;
 }
 function bossGo(state,wt){ boss.state=state; boss.st=0; if(wt!==undefined) boss.wt=wt; }
@@ -541,6 +561,11 @@ function bossBox(){
 function updBoss(dt){
   if(!boss) return;
   boss.t+=dt; boss.st+=dt; boss.hitCd=Math.max(0,boss.hitCd-dt);
+  if(boss.active && !boss.dead){
+    boss.fightT+=dt;
+    if(!boss.armCine && boss.fightT>=T_BRAZO){ boss.armCine=true; cineStart('brazo'); return; }
+    if(boss.armCine && boss.fightT>=T_CAIDA){ bossCae(); return; }
+  }
   if(boss.dead){ boss.deadT+=dt;
     if(boss.y<GROUND) boss.y=Math.min(GROUND,boss.y+300*dt);
     return; }
@@ -637,16 +662,23 @@ function bossDartHit(dd){
     } else { burst(dd.x,dd.y,PAPER2,3); SFX.rebote(); }
     return;
   }
-  boss.hp-= vuln? 26 : 9;
+  /* Daño subido (era 26 y 9): con los valores viejos hacían falta demasiados ciclos
+     y la pelea se hacía larguísima antes de llegar a la cinemática. */
+  boss.hp-= vuln? 38 : 13;
   boss.hitCd=.15; burst(dd.x,dd.y,RED,5); SFX.jefeHit();
   if(vuln){ sacude(7,.2); congela(.05); }
-  if(boss.hp<=0){ boss.hp=0; boss.dead=true; boss.deadT=0; feathers.length=0;
-    burst(boss.x,B.cy,GOLDS,34); burst(boss.x,B.cy,RED,18);
-    SFX.jefe(); SFX.triunfo(); sacude(20,.9); congela(.14);
-    say('☀ EL FALSO SOL HA CAÍDO',4); return; }
+  if(boss.hp<=0){ bossCae(); return; }
   /* A media vida se dispara la cinemática del brazo: es el punto del Popol Vuh en
      que Junajpú se lanza a sujetarlo y el falso sol se lo lleva de un tirón. */
   if(!boss.armCine && boss.hp<=boss.maxhp*0.5){ boss.armCine=true; cineStart('brazo'); }
+}
+function bossCae(){
+  if(!boss||boss.dead) return;
+  const B=bossBox();
+  boss.hp=0; boss.dead=true; boss.deadT=0; feathers.length=0;
+  burst(boss.x,B.cy,GOLDS,34); burst(boss.x,B.cy,RED,18);
+  SFX.jefe(); SFX.triunfo(); sacude(20,.9); congela(.14);
+  say('☀ EL FALSO SOL HA CAÍDO',4);
 }
 
 /* ============ NIEBLA DE COPAL (puerta del claro del jefe) ============
@@ -661,13 +693,26 @@ function updGate(dt){
   if(!gate.open && t.x>GATE_STOP){          // la niebla es un muro hasta que se abre
     t.x=GATE_STOP; if(t.vx>0) t.vx=0;
   }
-  if(gate.near && ENTER()){
-    gate.open=true; gate.flash=2.6; t.inv=Math.max(t.inv,1.2); t.hp=VIDA_MAX;
-    checkpoint=GATE_X+120;
-    say('EL CLARO DEL NANCE · dominio de Vucub Caquix',3.4);
-    burst(GATE_X,GROUND-60,GOLDS,14); SFX.umbral();
-  }
+  if(gate.near && ENTER()) abrirNiebla();
 }
+/* En el teléfono no hay tecla E: sin esto era IMPOSIBLE llegar al jefe desde el
+   móvil, porque los botones táctiles son sólo andar, saltar, tiro y agacharse.
+   Ahora basta con tocar la pantalla cuando aparece el aviso del umbral. */
+function abrirNiebla(){
+  if(gate.open || !gate.near) return false;
+  gate.open=true; gate.flash=2.6; t.inv=Math.max(t.inv,1.2); t.hp=VIDA_MAX;
+  checkpoint=GATE_X+120;
+  say('EL CLARO DEL NANCE · dominio de Vucub Caquix',3.4);
+  burst(GATE_X,GROUND-60,GOLDS,14); SFX.umbral();
+  return true;
+}
+
+/* ¿Junajpú está a la altura del bicho? Los ataques cuerpo a cuerpo son horizontales.
+   Antes el esqueleto y la araña sólo miraban `t.onGround`, así que alcanzaban a quien
+   estuviera de pie en una losa muy por encima de ellos; y el alacrán no miraba la
+   altura en absoluto: pegaba en toda la franja vertical, incluso en pleno salto.
+   El umbral es menor que un salto (que sube ~196 px), así que saltar SÍ esquiva. */
+const aLaAltura=e=>Math.abs(t.y-e.y)<52;
 
 /* ================= ACTUALIZACIÓN DE ENEMIGOS ================= */
 function updFoes(dt){
@@ -680,7 +725,7 @@ function updFoes(dt){
       e.atkT=Math.max(0,e.atkT-dt);
       if(e.state==='windup'){ e.wt-=dt;
         if(e.wt<=0){ e.state='stab'; e.wt=.32;
-          if(ad<95 && t.onGround) hurt(e.x); } }
+          if(ad<95 && aLaAltura(e)) hurt(e.x); } }
       else if(e.state==='stab'){ e.wt-=dt; e.x+=e.face*230*dt;
         if(e.wt<=0){ e.state='chase'; e.atkT=.9; } }
       else if(ad<380){ e.state='chase'; e.face=Math.sign(d)||1;
@@ -700,7 +745,7 @@ function updFoes(dt){
         if(e.y>=GROUND){ e.y=GROUND; e.state='chase'; e.wt=0; } }
       else if(e.state==='windup'){ e.wt-=dt; e.face=Math.sign(d)||e.face;
         if(e.wt<=0){ e.state='bite'; e.wt=.3;
-          if(ad<105 && t.onGround) hurt(e.x); } }
+          if(ad<105 && aLaAltura(e)) hurt(e.x); } }
       else if(e.state==='bite'){ e.wt-=dt; e.x+=e.face*260*dt;
         if(e.wt<=0){ e.state='chase'; e.cool=.75; } }
       else { e.state='chase'; e.face=Math.sign(d)||1;
@@ -721,7 +766,7 @@ function updFoes(dt){
         e.x+=(want>0?-1:1)*6; }
       else if(e.state==='sting'){ e.wt-=dt;
         if(e.wt<=.15 && !e.hitDone){ e.hitDone=true;
-          if(ad<170 && Math.sign(d)===e.face) hurt(e.x); }
+          if(ad<170 && Math.sign(d)===e.face && aLaAltura(e)) hurt(e.x); }
         if(e.wt<=0){ e.state='guard'; e.cool=1.1; e.hitDone=false; } }
       else if(ad<430){
         if(ad<200 && e.cool<=0 && Math.sign(d)===e.face){ e.state='sting'; e.wt=.72; e.hitDone=false; }
@@ -1025,7 +1070,12 @@ function cineEnd(){
     // la pelea continúa: sólo se recoloca a Junajpú y se le da un respiro
     SCREEN='juego';
     t.hurtT=0; t.vx=0; t.vy=0; t.inv=1.8; t.charging=false; t.charge=0; t.hp=VIDA_MAX;
-    if(boss && !boss.dead){ bossGo('rise'); boss.hitCd=.4; }
+    if(boss && !boss.dead){
+      bossGo('rise'); boss.hitCd=.4;
+      /* último asalto, y CORTO: sale malherido, con lo justo para dos ventanas de
+         daño. Sin esto la pelea seguía tan larga como antes de la cinemática. */
+      boss.hp=Math.min(boss.hp, 76);
+    }
     say('¡te arrancó el brazo! — acaba con él',3.6);
   }
   else SCREEN='juego';
@@ -1206,29 +1256,64 @@ function drawCine(){
 /* ================= ESCENOGRAFÍA ================= */
 /* La cámara se redondea a píxel entero: con posición fraccionaria las láminas se
    remuestreaban distinto cada fotograma y el fondo entero hervía al caminar. */
-function camX(){ return Math.round(Math.max(0,Math.min(LEVEL-CVW,t.x-CVW*0.45))); }
+function camX(){
+  const raw=Math.max(0,Math.min(LEVEL-CVW,t.x-CVW*0.45));
+  /* se ajusta a píxel de PANTALLA (no lógico): así la copia 1:1 de las láminas cae
+     en una posición entera del búfer, sin remuestreo ni hervor del fondo al andar */
+  return Math.round(raw*SCALE)/SCALE;
+}
 
-/* Bajo la línea de piso las láminas dejan una banda de papel crudo de hasta 7 px:
-   se estira la última franja de la propia lámina hasta el borde de la pantalla. */
-function drawSkirt(im,x0,w,h){
-  if(h>=CVH) return;
-  cx.drawImage(im, 0,SH-3, SW,3, x0, h-1, w, CVH-h+1);
+/* ---------- láminas pre-escaladas ----------
+   Cada lámina mide 1915×821 y se dibuja a ~1675 px de ancho. Reescalarlas en CADA
+   fotograma costaba 11,5 ms de los 20 que tenía el cuadro entero en Retina: era la
+   causa de que el juego fuera a tirones. Ahora cada una se escala UNA sola vez a un
+   lienzo aparte —con la franja de fundido y el zócalo ya pintados— y por fotograma
+   sólo queda una copia 1:1, que es prácticamente gratis.
+   El zócalo estira la última franja de la lámina hasta el borde inferior: bajo la
+   línea de piso quedaba si no una banda de papel crudo de hasta 7 px. */
+let scnCache=null, scnKey='';
+function scnCacheKey(){ return SCALE.toFixed(3)+'|'+SCN.map(im=>ok(im)?1:0).join(''); }
+function buildScnCache(){
+  scnCache=SCN.map((im,i)=>{
+    if(!ok(im)) return null;
+    const s=GROUND/SFLOOR[i], w=SW*s, h=SH*s;
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(w*SCALE)); c.height=Math.max(1,Math.round(CVH*SCALE));
+    const g=c.getContext('2d');
+    g.setTransform(SCALE,0,0,SCALE,0,0);
+    g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+    if(i===0||!ok(SCN[i-1])) g.drawImage(im,0,0,w,h);
+    else {
+      g.drawImage(im, OV/s,0, SW-OV/s,SH, OV,0, w-OV, h);      // cuerpo opaco
+      const N=14, sw=OV/N;                                      // franja de fundido:
+      for(let k=0;k<N;k++){                                     // se guarda CON su alfa,
+        g.globalAlpha=(k+1)/(N+1);                              // así al copiarla sobre
+        g.drawImage(im, (k*sw)/s,0, sw/s+1,SH, k*sw,0, sw+.8, h);  // la anterior funde igual
+      }
+      g.globalAlpha=1;
+    }
+    if(h<CVH) g.drawImage(im, 0,SH-3, SW,3, 0, h-1, w, CVH-h+1);   // zócalo
+    return {c, wl:w};
+  });
 }
 function drawScenes(cam){
-  SCN.forEach((im,i)=>{
-    if(!okS(i)) return;
-    const s=GROUND/SFLOOR[i], w=SW*s, x0=ZS[i]-cam, h=SH*s;
-    if(x0>CVW||x0+w<0) return;
-    if(i===0||!okS(i-1)){ cx.drawImage(im,x0,0,w,h); drawSkirt(im,x0,w,h); return; }
-    cx.drawImage(im, OV/s,0, SW-OV/s,SH, x0+OV,0, w-OV, h);   // cuerpo opaco
-    const N=14, sw=OV/N;                                       // franja de fundido
-    for(let k=0;k<N;k++){
-      cx.globalAlpha=(k+1)/(N+1);
-      cx.drawImage(im, (k*sw)/s,0, sw/s+1,SH, x0+k*sw,0, sw+.8, h);
-    }
-    cx.globalAlpha=1;
-    drawSkirt(im,x0,w,h);
-  });
+  const k=scnCacheKey();
+  if(scnKey!==k){ buildScnCache(); scnKey=k; }
+  if(!scnCache) return;
+  /* copia en coordenadas de PANTALLA: 1:1 con el búfer, sin remuestreo. Y sólo del
+     trozo que se ve: copiar la lámina entera (2500 px de ancho) para enseñar 1900
+     gastaba el doble de relleno del necesario, y en pantalla hay dos a la vez. */
+  cx.save(); cx.setTransform(1,0,0,1,0,0);
+  const W=Math.round(CVW*SCALE);
+  for(let i=0;i<scnCache.length;i++){
+    const e=scnCache[i]; if(!e) continue;
+    const px=Math.round((ZS[i]-cam)*SCALE);
+    if(px>=W || px+e.c.width<=0) continue;
+    const sx=Math.max(0,-px), dx=Math.max(0,px);
+    const sw=Math.min(e.c.width-sx, W-dx);
+    if(sw>0) cx.drawImage(e.c, sx,0, sw,e.c.height, dx,0, sw,e.c.height);
+  }
+  cx.restore();
 }
 function drawProps(cam){
   PROPS.forEach(p=>{
@@ -1342,7 +1427,7 @@ function drawGate(cam){
     cx.save();
     cx.globalAlpha=.55+.45*Math.sin(gate.t*4.5);
     cx.textAlign='center'; cx.font='700 17px Georgia';
-    inkText('E  ·  ENTRAR EN EL CLARO', bx, by, RED);
+    inkText(TOUCH?'TOCA LA PANTALLA PARA ENTRAR':'E  ·  ENTRAR EN EL CLARO', bx, by, RED);
     cx.globalAlpha=1;
     cx.font='13px Georgia';
     inkText('el falso sol te espera dentro', bx, by+22, INK, null, 3);
@@ -1738,7 +1823,7 @@ function drawPortada(){
   cx.fillText('demo jugable · primer pasaje · arte y música del proyecto', CVW/2, CVH-40);
 }
 
-const CONTROLES=[
+const CONTROLES_TECLADO=[
   ['A · D   o   ← →','andar'],
   ['ESPACIO  /  W  /  ↑','saltar'],
   ['K  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
@@ -1746,6 +1831,15 @@ const CONTROLES=[
   ['E  /  ENTER','atravesar la niebla de copal'],
   ['ESC','pausa   ·   M  silenciar la música'],
 ];
+const CONTROLES_TACTIL=[
+  ['◀   ▶','andar'],
+  ['SALTO','saltar'],
+  ['TIRO  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
+  ['AGACH.  (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
+  ['tocar la pantalla','atravesar la niebla de copal (cuando aparece el aviso)'],
+  ['⏸  arriba a la derecha','pausa'],
+];
+const CONTROLES=TOUCH?CONTROLES_TACTIL:CONTROLES_TECLADO;
 const CONSEJOS=[
   'Las ARAÑAS van pegadas al suelo: sólo las alcanzas agachado.',
   'El ALACRÁN lleva pedernal de frente. Sáltalo y dispárale mientras se gira.',
@@ -1928,6 +2022,7 @@ function onTap(fx,fy){
     case 'controles': SCREEN=volverDe; break;
     case 'juego':
       if(TOUCH && fx>.94 && fy<.13) irPausa();
+      else abrirNiebla();          // el umbral del claro se cruza tocando la pantalla
       break;
     case 'portada': case 'pausa': case 'muerte': case 'final': menuTap(fx,fy); break;
   }
