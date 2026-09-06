@@ -114,6 +114,13 @@ const T={ tVar:true, tCoy:true, tSq:true, tLean:true, tDust:true };
 
 const VIDA_MAX=4;                     // cuentas de jade
 
+/* Sello de la build. `_empaquetar.py` lo sustituye por la fecha y hora al generar
+   la copia web. Sirve para saber de un vistazo si el aparato que tienes delante
+   está viendo la versión nueva o una guardada en su caché: los navegadores de
+   móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
+   de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
+const VERSION='2026-09-06 17:39';
+
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
    está de verdad el personaje dentro de su PNG: ax = centro del cuerpo
@@ -1821,6 +1828,9 @@ function drawPortada(){
   cx.fillText('↑ ↓  elegir   ·   ENTER  aceptar   ·   también puedes hacer clic', CVW/2, CVH-64);
   cx.fillStyle='rgba(201,168,106,.32)'; cx.font='11px Georgia';
   cx.fillText('demo jugable · primer pasaje · arte y música del proyecto', CVW/2, CVH-40);
+  cx.textAlign='right'; cx.fillStyle='rgba(201,168,106,.26)'; cx.font='10px Georgia';
+  cx.fillText(VERSION, CVW-16, CVH-14);
+  cx.textAlign='center';
 }
 
 const CONTROLES_TECLADO=[
