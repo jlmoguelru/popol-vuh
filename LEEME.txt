@@ -1,0 +1,44 @@
+POPOL VUH - JUNAJPU Y EL FALSO SOL
+Demo jugable - primer pasaje
+
+COMO JUGAR
+----------
+Mac      : doble clic en  "JUGAR (Mac).command"
+Windows  : doble clic en  "JUGAR (Windows).bat"   (necesita Python instalado)
+
+Se abre una ventana negra (el servidor) y el juego en el navegador.
+Deja la ventana negra abierta mientras juegas; cierrala para terminar.
+No instala nada: es un servidor local que solo existe mientras esa ventana este abierta.
+
+Si el navegador no se abre solo, entra a:  http://localhost:8765/index.html
+
+Tambien puedes probar a abrir index.html con doble clic; en muchos navegadores
+funciona. Si ves un muneco de palo en vez del dibujo, o no suena la musica, es que
+ese navegador bloquea los archivos locales: usa el lanzador.
+
+CONTROLES
+---------
+A D  o  flechas .... andar
+ESPACIO / W / arriba  salto
+K (manten y suelta)   cerbatana - cuanto mas cargas, mas lejos y mas fuerte
+S / abajo (manten) .. agacharse: no avanzas, pero disparas a ras de suelo
+                      (unica forma de alcanzar a las aranas)
+E / ENTER .......... atravesar la niebla de copal (entrada al claro del jefe)
+ESC ................ pausa    M .... silenciar musica    F .... pantalla completa
+
+En movil: gira el telefono; los botones aparecen en pantalla.
+
+EL RECORRIDO
+------------
+Portada -> apertura del codice (8 laminas) -> la selva (Bioma 1) ->
+niebla de copal -> Vucub Caquix -> cinematica "El brazo de Junajpu" -> cierre.
+
+Los BRASEROS DE COPAL curan y son el punto donde vuelves si caes.
+A Vucub Caquix se le embosca cuando BAJA a comer al suelo: ese primer dardo
+abre la pelea. Despues, aprovecha cuando pica y se estrella.
+
+PUBLICARLO EN INTERNET
+----------------------
+Esta carpeta es una pagina estatica ya preparada (nombres sin acentos, index.html
+en la raiz, .nojekyll incluido). Sube su CONTENIDO tal cual a GitHub Pages,
+itch.io o Netlify y funciona con un enlace, sin servidor propio.
