@@ -27,6 +27,8 @@ E / ENTER .......... atravesar la niebla de copal (entrada al claro del jefe)
 ESC ................ pausa    M .... silenciar musica    F .... pantalla completa
 
 En movil: gira el telefono; los botones aparecen en pantalla.
+Arriba a la derecha hay dos botones: pantalla completa y pausa. La pantalla
+completa es lo mas comodo, porque quita la barra del navegador.
 
 EL RECORRIDO
 ------------

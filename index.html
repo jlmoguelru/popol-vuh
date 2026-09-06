@@ -5,17 +5,43 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Popol Vuh · Junajpú y el falso sol</title>
 <style>
-  :root{ --paper:#d8bd86; --ink:#2a1c10; --red:#9c2c1b; --golds:#e6cd8b; }
+  /* --vw/--vh los pone el guion a partir de visualViewport: es el ÚNICO alto que
+     descuenta la barra de direcciones del móvil. 100dvh es el respaldo moderno y
+     100vh el de toda la vida (que mide la ventana entera y deja la franja de
+     arriba debajo de la barra). */
+  :root{ --paper:#d8bd86; --ink:#2a1c10; --red:#9c2c1b; --golds:#e6cd8b;
+         --vw:100vw; --vh:100vh; }
+  @supports (height:100dvh){ :root{ --vh:100dvh; } }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%; background:#0d0905; overflow:hidden;
             font-family:Georgia,'Times New Roman',serif; color:var(--golds);
             -webkit-tap-highlight-color:transparent;}
-  #stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;}
-  canvas{max-width:100vw; max-height:100vh; aspect-ratio:16/9; background:#0d0905;
+  #stage{position:fixed; left:0; top:0; width:var(--vw); height:var(--vh);
+         display:flex; align-items:center; justify-content:center;}
+  canvas{max-width:var(--vw); max-height:var(--vh); aspect-ratio:16/9; background:#0d0905;
          touch-action:none; display:block;}
 
+  /* ---------- botones de esquina (pantalla completa y pausa) ---------- */
+  #hudbtns{position:absolute; z-index:35; display:flex; gap:8px;
+           top:calc(8px + env(safe-area-inset-top));
+           right:calc(10px + env(safe-area-inset-right));}
+  .hb{width:38px; height:38px; border-radius:50%; background:rgba(42,28,16,.55);
+      border:1.5px solid rgba(230,205,139,.38); display:flex; align-items:center;
+      justify-content:center; cursor:pointer; user-select:none; -webkit-user-select:none;
+      touch-action:manipulation;}
+  .hb:active{background:rgba(156,44,27,.75);}
+  .hb svg{width:19px; height:19px; fill:none; stroke:#e6cd8b; stroke-width:2;
+          stroke-linecap:round; stroke-linejoin:round;}
+  .hb svg rect{fill:#e6cd8b; stroke:none;}
+  .hb.tactil{display:none;}
+  body.touch.playing .hb.tactil{display:flex;}
+  body.sinfull #bFull{display:none;}
+  #bFull .salir{display:none;}
+  body.full #bFull .entrar{display:none;}
+  body.full #bFull .salir{display:block;}
+
   /* ---------- pantalla de carga ---------- */
-  #load{position:fixed; inset:0; z-index:60; display:flex; flex-direction:column;
+  #load{position:fixed; left:0; top:0; width:var(--vw); height:var(--vh); z-index:60; display:flex; flex-direction:column;
         align-items:center; justify-content:center; gap:20px; text-align:center;
         background:radial-gradient(80% 80% at 50% 38%,#241809,#0b0704); transition:opacity .7s;}
   #load h1{font-size:clamp(1.5rem,5vw,2.6rem); letter-spacing:.14em; color:#e7d4a8;
@@ -27,8 +53,12 @@
   #load.gone{opacity:0; pointer-events:none;}
 
   /* ---------- botones táctiles ---------- */
-  #tbtns{position:fixed; inset:auto 0 0 0; display:none; justify-content:space-between;
-         padding:0 14px calc(14px + env(safe-area-inset-bottom)) 14px; pointer-events:none; z-index:30;}
+  /* anclados al ESCENARIO, que mide el alto realmente visible: con position:fixed
+     quedaban por debajo del borde de la pantalla en cuanto salía la barra del
+     navegador, y no se podían pulsar. */
+  #tbtns{position:absolute; left:0; right:0; bottom:0; display:none; justify-content:space-between;
+         padding:0 calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom))
+                 calc(14px + env(safe-area-inset-left)); pointer-events:none; z-index:30;}
   body.touch.playing #tbtns{display:flex;}
   .tb{pointer-events:auto; width:66px; height:66px; border-radius:50%;
       background:rgba(42,28,16,.62); border:2px solid rgba(230,205,139,.45);
@@ -39,7 +69,7 @@
   @media (max-height:520px){ .tb{width:54px;height:54px;font-size:11px;} }
 
   /* ---------- vertical: el juego es 16:9, en retrato quedaría una franja ---------- */
-  #gira{position:fixed; inset:0; z-index:50; display:none; flex-direction:column;
+  #gira{position:fixed; left:0; top:0; width:var(--vw); height:var(--vh); z-index:50; display:none; flex-direction:column;
         align-items:center; justify-content:center; gap:16px; text-align:center; padding:24px;
         background:radial-gradient(80% 80% at 50% 40%,#241809,#0b0704); color:#e7d4a8;}
   #gira .g{width:40px; height:70px; border:3px solid #e7d4a8; border-radius:8px;
@@ -51,11 +81,22 @@
 </style>
 </head>
 <body>
-<div id="stage"><canvas id="cv" width="1280" height="720"></canvas></div>
+<div id="stage"><canvas id="cv" width="1280" height="720"></canvas>
+
+<div id="hudbtns">
+  <div class="hb" id="bFull" role="button" aria-label="Pantalla completa">
+    <svg viewBox="0 0 24 24" class="entrar"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    <svg viewBox="0 0 24 24" class="salir"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+  </div>
+  <div class="hb tactil" id="bPausa" role="button" aria-label="Pausa">
+    <svg viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14"/><rect x="13.5" y="5" width="3.5" height="14"/></svg>
+  </div>
+</div>
 
 <div id="tbtns">
   <div class="tgrp"><div class="tb" data-vk="l">◀</div><div class="tb" data-vk="r">▶</div><div class="tb" data-vk="duck">Agach.</div></div>
   <div class="tgrp"><div class="tb" data-vk="shoot">Tiro</div><div class="tb" data-vk="jump">Salto</div></div>
+</div>
 </div>
 
 <div id="gira"><div class="g"></div><div>Gira el teléfono<br><small style="opacity:.65">el códice se lee a lo ancho</small></div></div>
@@ -96,9 +137,54 @@ function fitCanvas(){
   if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
   SCALE=w/CVW;
 }
-addEventListener('resize',fitCanvas);
+/* ---------- ajustar al alto que SE VE ----------
+   En el móvil, 100vh mide la ventana completa, como si la barra de direcciones no
+   estuviera: el lienzo se centraba en un alto mayor que el visible y la franja de
+   arriba —el retrato y las cuentas de jade— quedaba tapada por la barra.
+   visualViewport sí mide lo que queda a la vista, y cambia cuando la barra
+   aparece o se esconde. */
+function fitViewport(){
+  const vv=window.visualViewport;
+  const w=Math.round(vv?vv.width:innerWidth), h=Math.round(vv?vv.height:innerHeight);
+  if(!w||!h) return;
+  const st=document.documentElement.style;
+  st.setProperty('--vw', w+'px');
+  st.setProperty('--vh', h+'px');
+  /* algunos navegadores desplazan el área visible en vez de encogerla */
+  const esc=document.getElementById('stage');
+  if(esc && vv) esc.style.transform = vv.offsetTop? 'translateY('+Math.round(vv.offsetTop)+'px)' : '';
+  fitCanvas();
+}
+addEventListener('resize',fitViewport);
+addEventListener('orientationchange',()=>{ fitViewport(); setTimeout(fitViewport,300); });
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',fitViewport);
+  visualViewport.addEventListener('scroll',fitViewport);
+}
 if(window.ResizeObserver) new ResizeObserver(fitCanvas).observe(document.getElementById('stage'));
-fitCanvas();
+fitViewport();
+
+/* ---------- pantalla completa ----------
+   Es la solución de verdad al problema de la barra: quita la interfaz del
+   navegador entera. Safari de iPhone no deja poner en pantalla completa nada que
+   no sea un vídeo, así que allí el botón se esconde y queda el ajuste de arriba. */
+const raiz=document.documentElement;
+const PIDE_FULL = raiz.requestFullscreen || raiz.webkitRequestFullscreen;
+const SALE_FULL = document.exitFullscreen || document.webkitExitFullscreen;
+const hayFull = !!(PIDE_FULL && SALE_FULL);
+const enFull = ()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+function marcaFull(){ document.body.classList.toggle('full', enFull()); fitViewport(); }
+function toggleFull(){
+  try{
+    if(enFull()){ SALE_FULL.call(document); return; }
+    const p=PIDE_FULL.call(raiz);
+    /* al entrar, en Android se puede fijar el horizontal: el juego es 16:9 y
+       girar el teléfono dentro de pantalla completa lo dejaba en una franja */
+    if(p&&p.then) p.then(()=>{ try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(_){} }).catch(()=>{});
+  }catch(_){}
+}
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,marcaFull));
+if(!hayFull) document.body.classList.add('sinfull');
 
 const PAPER='#d8bd86', PAPER2='#c9a86a', INK='#2a1c10', RED='#9c2c1b',
       BLUE='#2f6f86', GOLD='#7a5a1e', GOLDS='#e6cd8b', JADE='#2f8f74', BONE='#e9dfc4';
@@ -119,7 +205,7 @@ const VIDA_MAX=4;                     // cuentas de jade
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-06 17:39';
+const VERSION='2026-09-06 18:26';
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -450,6 +536,9 @@ document.querySelectorAll('.tb').forEach(b=>{
   b.addEventListener('pointercancel',off);
   b.addEventListener('lostpointercapture',off);
 });
+
+document.getElementById('bFull').addEventListener('click',e=>{ e.preventDefault(); unlockAudio(); toggleFull(); });
+document.getElementById('bPausa').addEventListener('click',e=>{ e.preventDefault(); if(SCREEN==='juego') irPausa(); });
 
 /* clic/toque sobre el lienzo: avanza cinemáticas y confirma en los menús */
 cv.addEventListener('pointerdown',e=>{
@@ -1839,7 +1928,7 @@ const CONTROLES_TECLADO=[
   ['K  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
   ['S  /  ↓  (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
   ['E  /  ENTER','atravesar la niebla de copal'],
-  ['ESC','pausa   ·   M  silenciar la música'],
+  ['ESC','pausa   ·   M  silenciar la música   ·   F  pantalla completa'],
 ];
 const CONTROLES_TACTIL=[
   ['◀   ▶','andar'],
@@ -1847,7 +1936,7 @@ const CONTROLES_TACTIL=[
   ['TIRO  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
   ['AGACH.  (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
   ['tocar la pantalla','atravesar la niebla de copal (cuando aparece el aviso)'],
-  ['⏸  arriba a la derecha','pausa'],
+  ['botones de arriba','pantalla completa y pausa'],
 ];
 const CONTROLES=TOUCH?CONTROLES_TACTIL:CONTROLES_TECLADO;
 const CONSEJOS=[
@@ -1988,12 +2077,6 @@ function drawJuego(){
   drawGate(cam);    // la niebla va delante: se entra atravesándola
   cx.restore();
   drawHUD();
-  if(TOUCH){        // botón de pausa para dedos
-    cx.save(); cx.globalAlpha=.75; cx.fillStyle='rgba(42,28,16,.6)';
-    cx.beginPath(); cx.arc(CVW-42,40,22,0,7); cx.fill();
-    cx.fillStyle=GOLDS; cx.fillRect(CVW-50,30,6,20); cx.fillRect(CVW-40,30,6,20);
-    cx.restore();
-  }
 }
 
 /* ================= ENTRADA POR PANTALLA ================= */
@@ -2002,9 +2085,7 @@ function unlockAudio(){ if(audioUnlocked) return; audioUnlocked=true; ac(); musR
 function onKey(code){
   unlockAudio();
   if(code==='KeyM'){ SND.on=!SND.on; sndSave(); musRefresh(); say(SND.on?'música: sí':'música: no',1.2); return; }
-  if(code==='KeyF'){ if(document.fullscreenElement) document.exitFullscreen&&document.exitFullscreen();
-                     else document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{});
-                     return; }
+  if(code==='KeyF'){ toggleFull(); return; }
   switch(SCREEN){
     case 'cine':
       if(code==='Space'||code==='Enter'||code==='ArrowRight'||code==='KeyD') cineNext();
@@ -2031,8 +2112,7 @@ function onTap(fx,fy){
     case 'cine':   (fx<.25)? cinePrev() : cineNext(); break;
     case 'controles': SCREEN=volverDe; break;
     case 'juego':
-      if(TOUCH && fx>.94 && fy<.13) irPausa();
-      else abrirNiebla();          // el umbral del claro se cruza tocando la pantalla
+      abrirNiebla();               // el umbral del claro se cruza tocando la pantalla
       break;
     case 'portada': case 'pausa': case 'muerte': case 'final': menuTap(fx,fy); break;
   }
