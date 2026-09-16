@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MV8PZBKFY2"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-MV8PZBKFY2');
+</script>
 <title>Popol Vuh · Junajpú y el falso sol</title>
 <style>
   /* --vw/--vh los pone el guion a partir de visualViewport: es el ÚNICO alto que
@@ -65,8 +74,25 @@
       color:var(--golds); font-size:12px; display:flex; align-items:center; justify-content:center;
       user-select:none; -webkit-user-select:none; touch-action:none;}
   .tb.on{background:rgba(156,44,27,.8);}
+  /* joystick: horizontal para andar, arriba/abajo para apuntar la cerbatana */
+  .joy{pointer-events:auto; position:relative; width:128px; height:128px; border-radius:50%;
+       background:radial-gradient(circle, rgba(42,28,16,.28) 0 54%, rgba(42,28,16,.58) 55%);
+       border:2px solid rgba(230,205,139,.45); touch-action:none;
+       user-select:none; -webkit-user-select:none;}
+  .joy .perilla{position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px 0 0 -28px;
+       border-radius:50%; background:rgba(230,205,139,.55); border:2px solid rgba(42,28,16,.55);
+       box-shadow:0 2px 8px rgba(0,0,0,.35); transition:transform .12s ease-out;}
+  .joy.on .perilla{transition:none; background:rgba(230,205,139,.82);}
+  /* muescas: dicen sin palabras que arriba y abajo también hacen algo */
+  .joy i{position:absolute; width:0; height:0; border:6px solid transparent; opacity:.6;}
+  .joy i.n{top:7px;    left:50%; margin-left:-6px; border-bottom-color:#e6cd8b;}
+  .joy i.s{bottom:7px; left:50%; margin-left:-6px; border-top-color:#e6cd8b;}
+  .joy i.o{left:7px;   top:50%;  margin-top:-6px;  border-right-color:#e6cd8b;}
+  .joy i.e{right:7px;  top:50%;  margin-top:-6px;  border-left-color:#e6cd8b;}
+  .joy i.vivo{opacity:1;}
   .tgrp{display:flex; gap:10px; align-items:flex-end;}
-  @media (max-height:520px){ .tb{width:54px;height:54px;font-size:11px;} }
+  @media (max-height:520px){ .tb{width:54px;height:54px;font-size:11px;}
+    .joy{width:108px;height:108px;} .joy .perilla{width:48px;height:48px;margin:-24px 0 0 -24px;} }
 
   /* ---------- vertical: el juego es 16:9, en retrato quedaría una franja ---------- */
   #gira{position:fixed; left:0; top:0; width:var(--vw); height:var(--vh); z-index:50; display:none; flex-direction:column;
@@ -94,7 +120,7 @@
 </div>
 
 <div id="tbtns">
-  <div class="tgrp"><div class="tb" data-vk="l">◀</div><div class="tb" data-vk="r">▶</div><div class="tb" data-vk="duck">Agach.</div></div>
+  <div class="tgrp"><div class="joy" id="joy"><i class="n"></i><i class="s"></i><i class="o"></i><i class="e"></i><div class="perilla"></div></div><div class="tb" data-vk="duck">Agach.</div></div>
   <div class="tgrp"><div class="tb" data-vk="shoot">Tiro</div><div class="tb" data-vk="jump">Salto</div></div>
 </div>
 </div>
@@ -177,6 +203,7 @@ function marcaFull(){ document.body.classList.toggle('full', enFull()); fitViewp
 function toggleFull(){
   try{
     if(enFull()){ SALE_FULL.call(document); return; }
+    evento('pantalla_completa');
     const p=PIDE_FULL.call(raiz);
     /* al entrar, en Android se puede fijar el horizontal: el juego es 16:9 y
        girar el teléfono dentro de pantalla completa lo dejaba en una franja */
@@ -205,7 +232,7 @@ const VIDA_MAX=4;                     // cuentas de jade
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-06 18:26';
+const VERSION='2026-09-16 17:05';
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -227,6 +254,19 @@ anchorSet('hun_',360,{
   run1:[0.4772,0.9802], run2:[0.4183,0.983], run3:[0.4788,0.983], run4:[0.4875,0.9433],
   run5:[0.4499,0.9858], run6:[0.4631,0.983], run7:[0.485,0.9915], run8:[0.479,0.9858],
   shoot1:[0.3389,0.9916], shoot2:[0.2646,0.9944], shoot3:[0.4287,0.9972] });
+/* Disparo vertical: hojas «Disparando hacia arriba» y «disparando hacia abajo»,
+   18 cuadros cada una (1 reposo · 2-4 sube y apunta · 5-6 sopla y sale el dardo ·
+   7-12 remata y baja · 13-18 reposo mirando). Venían en RGB con el fondo de cuadros
+   pintado; se recortaron con _recortar_hoja.py.
+   Escala: NO se puede igualar por la altura total, porque el penacho cambia con la
+   postura (mirando arriba cae hacia atrás; mirando abajo va erguido) y así los
+   cuadros salían un 18-26 % más grandes que el perfil. Se iguala por la PIERNA
+   (del cinturón a los pies): 145,5 px en el perfil a ref 360, y 103 px en las dos
+   hojas nuevas, que están a la misma escala entre sí → ref 255. Lo confirma la
+   cintura: vista de frente sale ~1,4 veces más ancha que de perfil, como en una
+   persona. */
+anchorSet('hun_up',255,{1:[0.4957,0.9755], 2:[0.5044,0.9863], 3:[0.5089,0.9901], 4:[0.5135,0.9852], 5:[0.5,0.9846], 6:[0.5,0.9894], 7:[0.5,0.9843], 8:[0.5182,0.9844], 9:[0.5138,0.9893], 10:[0.4912,0.9838], 11:[0.487,0.9826], 12:[0.4955,0.9811], 13:[0.5294,0.981], 14:[0.5048,0.9809], 15:[0.5096,0.9809], 16:[0.5192,0.9809], 17:[0.5,0.9806], 18:[0.5,0.9805]});
+anchorSet('hun_down',255,{1:[0.4867,0.9796], 2:[0.456,0.9837], 3:[0.4597,0.9791], 4:[0.4919,0.9791], 5:[0.475,0.9788], 6:[0.5045,0.9784], 7:[0.513,0.9827], 8:[0.5086,0.9825], 9:[0.438,0.9786], 10:[0.4519,0.983], 11:[0.5345,0.9784], 12:[0.5431,0.9826], 13:[0.5128,0.9827], 14:[0.5169,0.9827], 15:[0.5043,0.9827], 16:[0.5043,0.9828], 17:[0.5046,0.9828], 18:[0.5,0.9828]});
 anchorSet('esq_',365,{
   walk1:[0.4257,0.9918], walk2:[0.5006,0.9918], walk3:[0.478,0.9918], walk4:[0.4801,0.9945],
   walk5:[0.5164,0.989], walk6:[0.5038,0.9918], wind:[0.5465,0.9945], atk:[0.264,0.9945],
@@ -313,6 +353,7 @@ const OPT={}, OPT_SRC={ sh1:'hun_shoot1', sh2:'hun_shoot2', sh3:'hun_shoot3',
   dk1:'hun_duck1', dk2:'hun_duck2', dk3:'hun_duck3', dk4:'hun_duck4', dk5:'hun_duck5',
   dk6:'hun_duck6', dk7:'hun_duck7', dk8:'hun_duck8', dk9:'hun_duck9',
   dart:'dardo' };
+for(let i=1;i<=18;i++){ OPT_SRC['up'+i]='hun_up'+i; OPT_SRC['dn'+i]='hun_down'+i; }
 Object.entries(ART_SRC).forEach(([k,f])=>{ ART[k]=loadImg(f,()=>{artFail=true;}); });
 Object.entries(OPT_SRC).forEach(([k,f])=>{ OPT[k]=loadImg(f,null); });
 const ok=im=>!!(im&&im.complete&&im.naturalWidth>0);
@@ -491,6 +532,16 @@ const SFX={
   derrota:()=>{ [440,392,330,262].forEach((f,i)=>tone({type:'sine',f0:f,d:.9,v:.16,delay:i*.17,atk:.03})); }
 };
 
+/* ================= ANALÍTICA =================
+   El juego es una sola página dibujada en un lienzo: Google Analytics por sí solo
+   sólo vería «alguien abrió la página». Estos eventos dicen HASTA DÓNDE llega la
+   gente. No llevan ningún dato personal. Si el script de Google no carga (sin
+   conexión o con un bloqueador) gtag sigue existiendo y no se rompe nada.
+   Para quitarlos basta con vaciar esta función. */
+function evento(nombre, datos){
+  try{ if(typeof gtag==='function') gtag('event', nombre, datos||{}); }catch(_){}
+}
+
 /* ================= ESTADO GENERAL ================= */
 /* pantalla: 'carga' → 'portada' → 'apertura' → 'juego' ↔ 'cine' → 'final' */
 let SCREEN='carga';
@@ -500,7 +551,9 @@ function sacude(mag,dur){ shake.mag=Math.max(shake.mag,mag); shake.t=Math.max(sh
 function congela(s){ hitStop=Math.max(hitStop,s); }   // micro-pausa de impacto
 
 /* ================= ENTRADA ================= */
-const keys={}, vk={l:0,r:0,jump:0,shoot:0,duck:0};
+/* vk = mandos virtuales táctiles. ax es ANALÓGICO (-1..1): el joystick inclinado
+   a medias camina, a fondo corre. up/dn apuntan la cerbatana. */
+const keys={}, vk={ax:0,up:0,dn:0,jump:0,shoot:0,duck:0};
 let anyKey=false;                       // para las pantallas de "pulsa una tecla"
 const PREV_DEF=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape','KeyM','Tab'];
 addEventListener('keydown',e=>{
@@ -514,13 +567,20 @@ addEventListener('keyup',e=>{ keys[e.code]=false; });
    corriendo y al volver Junajpú seguía corriendo solo contra la pared. */
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false;
                               for(const k in vk) vk[k]=0;
+                              if(typeof joySuelta==='function') joySuelta();
                               if(SCREEN==='juego') paused=true; });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden&&SCREEN==='juego') paused=true; });
 
-const L=()=>keys.KeyA||keys.ArrowLeft||vk.l, R=()=>keys.KeyD||keys.ArrowRight||vk.r,
-      JUMP=()=>keys.KeyW||keys.Space||keys.ArrowUp||vk.jump,
-      SHOOT=()=>keys.KeyK||keys.KeyJ||vk.shoot,
-      DUCK=()=>keys.KeyS||keys.ArrowDown||vk.duck,
+/* Teclado. Apuntar arriba/abajo necesitaba ↑/W y ↓/S, que antes eran saltar y
+   agacharse: con los dos significados a la vez, «mantén ↑ y dispara» hacía saltar
+   y «mantén ↓ y dispara» agachaba. Por eso el salto pasa a ESPACIO/Z y agacharse a
+   C/L. Así hay dos manos cómodas: WASD + ESPACIO + K/L, o flechas + Z/X/C. */
+const L=()=>keys.KeyA||keys.ArrowLeft, R=()=>keys.KeyD||keys.ArrowRight,
+      JUMP=()=>keys.Space||keys.KeyZ||vk.jump,
+      SHOOT=()=>keys.KeyK||keys.KeyJ||keys.KeyX||vk.shoot,
+      DUCK=()=>keys.KeyC||keys.KeyL||vk.duck,
+      AIM_UP=()=>keys.KeyW||keys.ArrowUp||vk.up,
+      AIM_DN=()=>keys.KeyS||keys.ArrowDown||vk.dn,
       ENTER=()=>keys.KeyE||keys.Enter;
 
 /* botones táctiles: se capturan al puntero para que soltar FUERA del botón
@@ -536,6 +596,42 @@ document.querySelectorAll('.tb').forEach(b=>{
   b.addEventListener('pointercancel',off);
   b.addEventListener('lostpointercapture',off);
 });
+
+/* ---------- joystick ----------
+   Captura su propio dedo, así se puede mover y pulsar TIRO o SALTO a la vez. */
+const joy=document.getElementById('joy'), perilla=joy.querySelector('.perilla');
+const marcas={n:joy.querySelector('.n'),s:joy.querySelector('.s'),o:joy.querySelector('.o'),e:joy.querySelector('.e')};
+let joyDedo=null;
+function joyMueve(e){
+  const r=joy.getBoundingClientRect(), rad=r.width/2, max=rad*.6;
+  let dx=e.clientX-(r.left+rad), dy=e.clientY-(r.top+rad);
+  const d=Math.hypot(dx,dy);
+  if(d>max){ dx=dx/d*max; dy=dy/d*max; }
+  perilla.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)';
+  const nx=dx/max, ny=dy/max, MUERTA=.28;
+  /* zona muerta y rampa: a medio camino anda, al ~85 % ya corre a tope */
+  vk.ax = Math.abs(nx)<MUERTA ? 0 : Math.sign(nx)*Math.min(1,(Math.abs(nx)-MUERTA)/(1-MUERTA)*1.25);
+  /* apuntar sólo si el gesto es claramente vertical (a menos de ~40° de la
+     vertical): con un cono más ancho, andar en diagonal con el pulgar un poco
+     levantado mandaba el dardo al cielo sin querer */
+  vk.up = (ny<-.5 && -ny>Math.abs(nx)*1.2) ? 1 : 0;
+  vk.dn = (ny> .5 &&  ny>Math.abs(nx)*1.2) ? 1 : 0;
+  marcas.n.classList.toggle('vivo',!!vk.up); marcas.s.classList.toggle('vivo',!!vk.dn);
+  marcas.o.classList.toggle('vivo',vk.ax<0); marcas.e.classList.toggle('vivo',vk.ax>0);
+}
+function joySuelta(){
+  joyDedo=null; joy.classList.remove('on'); perilla.style.transform='';
+  vk.ax=0; vk.up=0; vk.dn=0;
+  Object.values(marcas).forEach(m=>m.classList.remove('vivo'));
+}
+joy.addEventListener('pointerdown',e=>{
+  e.preventDefault(); joyDedo=e.pointerId; joy.classList.add('on');
+  try{ joy.setPointerCapture(e.pointerId); }catch(_){}
+  joyMueve(e);
+});
+joy.addEventListener('pointermove',e=>{ if(e.pointerId===joyDedo) joyMueve(e); });
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>
+  joy.addEventListener(ev,e=>{ if(e.pointerId===joyDedo) joySuelta(); }));
 
 document.getElementById('bFull').addEventListener('click',e=>{ e.preventDefault(); unlockAudio(); toggleFull(); });
 document.getElementById('bPausa').addEventListener('click',e=>{ e.preventDefault(); if(SCREEN==='juego') irPausa(); });
@@ -579,7 +675,8 @@ let checkpoint=400;
 const t={ x:400, y:GROUND, vx:0, vy:0, face:1, onGround:true,
   jumpsLeft:1, jumpHeld:false, run:0, animT:0, duck:false,
   hp:VIDA_MAX, hurtT:0, inv:0, charging:false, charge:0, dartCd:0,
-  coyote:0, jbuf:0, squash:0, stretch:0, muerto:false, muerteT:0 };
+  coyote:0, jbuf:0, squash:0, stretch:0, muerto:false, muerteT:0,
+  aim:'frente', shotAim:'frente' };
 const darts=[], parts=[], feathers=[];
 let foes=[], boss=null;
 let notice={txt:'',t:0};
@@ -589,13 +686,17 @@ function say(txt,d){ notice={txt,t:d||2.2}; }
    mismo aviso para quien juega con los dedos: en el teléfono no hay barra
    espaciadora y decir «pulsa ESPACIO» no ayudaba a nadie. */
 const PISTAS=[
-  {id:'mover',  txt:'A · D  o  ← →   para andar', tap:'usa  ◀  ▶  para andar', cond:()=>true, wait:1.2, dur:4},
+  {id:'mover',  txt:'A · D  o  ← →   para andar', tap:'mueve el joystick para andar', cond:()=>true, wait:1.2, dur:4},
   {id:'salto',  txt:'ESPACIO  para saltar',       tap:'toca  SALTO  para saltar', cond:()=>t.x>620, dur:3.6},
   {id:'tiro',   txt:'MANTÉN K  y suelta:  cerbatana', tap:'MANTÉN  TIRO  y suelta:  cerbatana',
    cond:()=>foes.some(e=>e.hp>0&&Math.abs(e.x-t.x)<520), dur:4},
+  /* el tecolote vigila desde lo alto: es el primer blanco que pide disparar hacia arriba */
+  {id:'arriba', txt:'mantén  W  o  ↑  y dispara:  la cerbatana apunta hacia arriba',
+   tap:'joystick ARRIBA + TIRO:  dispara hacia arriba',
+   cond:()=>foes.some(e=>e.kind==='tec'&&e.hp>0&&Math.abs(e.x-t.x)<520), dur:4.5},
   {id:'espalda',txt:'al alacrán sólo lo hieres POR LA ESPALDA', cond:()=>foes.some(e=>e.kind==='ala'&&e.hp>0&&Math.abs(e.x-t.x)<420), dur:4.5},
-  {id:'agacha', txt:'S  para agacharte:  única forma de darle a las arañas',
-   tap:'AGACH.:  única forma de darle a las arañas',
+  {id:'agacha', txt:'C  para agacharte:  a las arañas se les da a ras de suelo',
+   tap:'AGACH.:  a las arañas se les da a ras de suelo',
    cond:()=>foes.some(e=>e.kind==='ara'&&e.hp>0&&Math.abs(e.x-t.x)<420), dur:4.5},
 ];
 const textoPista=p=>(TOUCH&&p.tap)?p.tap:p.txt;
@@ -752,6 +853,7 @@ function bossDartHit(dd){
   const vuln = boss.state==='eat'||boss.state==='stun';
   if(!boss.active){
     if(vuln){ boss.active=true; boss.hp-=60; boss.hitCd=.25; bossGo('rise');
+      evento('jefe_emboscado');
       t.hp=VIDA_MAX;                       // la pelea empieza con las cuentas llenas
       say('¡EMBOSCADA! El falso sol chilla de rabia',3);
       burst(boss.x,B.cy,RED,16); SFX.jefe(); sacude(14,.5); congela(.09);
@@ -770,6 +872,7 @@ function bossDartHit(dd){
 }
 function bossCae(){
   if(!boss||boss.dead) return;
+  evento('jefe_derrotado', {segundos_de_pelea: Math.round(boss.fightT)});
   const B=bossBox();
   boss.hp=0; boss.dead=true; boss.deadT=0; feathers.length=0;
   burst(boss.x,B.cy,GOLDS,34); burst(boss.x,B.cy,RED,18);
@@ -796,6 +899,7 @@ function updGate(dt){
    Ahora basta con tocar la pantalla cuando aparece el aviso del umbral. */
 function abrirNiebla(){
   if(gate.open || !gate.near) return false;
+  evento('niebla_cruzada');
   gate.open=true; gate.flash=2.6; t.inv=Math.max(t.inv,1.2); t.hp=VIDA_MAX;
   checkpoint=GATE_X+120;
   say('EL CLARO DEL NANCE · dominio de Vucub Caquix',3.4);
@@ -951,12 +1055,26 @@ function revive(){
   SCREEN='juego';
 }
 
+/* Punta de la cerbatana en el cuadro 6 («sale el dardo») de cada hoja, en píxeles
+   lógicos desde los pies y mirando a la derecha. Medidas sobre el arte: el dardo
+   tiene que nacer ahí o se ve salir de la nada. Hacia abajo la cerbatana apunta
+   ~58° por debajo de la horizontal, delante del cuerpo. */
+const PUNTA={ arriba:{dx:4, dy:-119}, abajo:{dx:22, dy:-32, ang:58*Math.PI/180} };
 function shootDart(){
-  /* de pie la boquilla queda a ~76 % de la altura del sprite; agachado baja a ras
-     de suelo — es la única forma de alcanzar a las arañas. */
-  const bajo=t.duck;
-  darts.push({x:t.x+t.face*(bajo?80:52), y:t.y-(bajo?P.duckDy:76),
-              vx:t.face*(880+320*t.charge), life:.9, bajo});
+  const v=880+320*t.charge, dir=t.aim;
+  t.shotAim=dir;                          // lo usa el dibujo para rematar el soplido
+  if(dir==='arriba'){
+    darts.push({x:t.x+t.face*PUNTA.arriba.dx, y:t.y+PUNTA.arriba.dy, vx:0, vy:-v, life:.9});
+  } else if(dir==='abajo'){
+    const a=PUNTA.abajo.ang;
+    darts.push({x:t.x+t.face*PUNTA.abajo.dx, y:t.y+PUNTA.abajo.dy,
+                vx:t.face*Math.cos(a)*v, vy:Math.sin(a)*v, life:.9});
+  } else {
+    /* de pie la boquilla queda a ~76 % de la altura del sprite; agachado baja a ras
+       de suelo, para alcanzar de lejos a las arañas */
+    const bajo=t.duck;
+    darts.push({x:t.x+t.face*(bajo?80:52), y:t.y-(bajo?P.duckDy:76), vx:t.face*v, vy:0, life:.9, bajo});
+  }
   SFX.soplo();
 }
 
@@ -964,12 +1082,18 @@ function shootDart(){
 function control(dt){
   const accel=t.onGround?P.accG:P.accA;
   t.duck = DUCK() && t.onGround;
-  let intent=0;
-  if(!t.charging){ if(L())intent=-1; if(R())intent=1; }
+  /* hacia dónde apunta la cerbatana; agachado siempre dispara al frente, a ras de suelo */
+  t.aim = t.duck? 'frente' : AIM_UP()? 'arriba' : AIM_DN()? 'abajo' : 'frente';
+  /* eje de marcha: el teclado da -1/0/1; el joystick da un valor intermedio que
+     limita la velocidad, así inclinado a medias Junajpú camina en vez de correr */
+  let eje=0;
+  if(!t.charging){ if(L())eje=-1; if(R())eje=1; if(vk.ax) eje=vk.ax; }
+  let intent=Math.sign(eje);
+  const vmax=P.spd*Math.min(1,Math.abs(eje)||1);
   if(t.duck){ if(intent!==0 && !t.charging) t.face=intent;   // agachado se gira, no avanza
     intent=0; t.vx=0; }
   if(intent!==0){ t.face=intent; t.vx+=intent*accel*dt;
-    t.vx=Math.max(-P.spd,Math.min(P.spd,t.vx));
+    t.vx=Math.max(-vmax,Math.min(vmax,t.vx));
   } else t.vx*= t.onGround? (t.charging?.55:P.fric) : .96;
 
   // — salto (coyote time + buffer) —
@@ -1024,7 +1148,12 @@ function phys(dt){
       burst(t.x-t.face*10,t.y-2,PAPER2,2); SFX.paso();
     }
   }
-  darts.forEach(d=>{d.x+=d.vx*dt; d.life-=dt;});
+  darts.forEach(d=>{
+    d.x+=d.vx*dt; d.y+=(d.vy||0)*dt; d.life-=dt;
+    /* el dardo hacia abajo se clava en el suelo; las losas las atraviesa, si no
+       disparar hacia abajo desde una plataforma no serviría para nada */
+    if(d.vy>0 && d.life>0 && d.y>=GROUND-2){ d.life=0; burst(d.x,GROUND-2,PAPER2,4); }
+  });
   for(let i=darts.length-1;i>=0;i--) if(darts[i].life<=0) darts.splice(i,1);
   parts.forEach(p=>{p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=800*dt; p.life-=dt; p.rot+=p.spin*dt;});
   for(let i=parts.length-1;i>=0;i--) if(parts[i].life<=0) parts.splice(i,1);
@@ -1150,6 +1279,9 @@ const BOX_ANCHO={x:50,y:14,w:1180,h:506};      // láminas 16:9 (brazo)
 const BOX_ALTO ={x:50,y:10,w:1180,h:512};      // láminas de códice (4:3)
 let cine={on:false,seq:BRAZO,box:BOX_ANCHO,i:0,t:0,prev:-1,fade:0,motivo:'repaso'};
 function cineStart(motivo){
+  if(motivo==='apertura') evento('apertura_iniciada');
+  else if(motivo==='brazo') evento('cinematica_brazo');
+  else if(motivo==='final') evento('cierre_visto');
   const seq = motivo==='apertura'? APERTURA : motivo==='final'? CIERRE : BRAZO;
   const box = motivo==='apertura'||motivo==='final'? BOX_ALTO : BOX_ANCHO;
   cine={on:true,seq,box,i:0,t:0,prev:-1,fade:0,motivo:motivo||'repaso'};
@@ -1666,12 +1798,18 @@ function drawBoss(cam){
 function snap(){ return { x:t.x, y:t.y, face:t.face, run:t.run,
   inAir:!t.onGround, charging:t.charging, charge:t.charge,
   dartCd:t.dartCd, hurtT:t.hurtT, vy:t.vy, duck:t.duck,
-  squash:t.squash, stretch:t.stretch, vx:t.vx }; }
+  squash:t.squash, stretch:t.stretch, vx:t.vx, animT:t.animT,
+  aim:t.aim, shotAim:t.shotAim }; }
 
 /* Selección de cuadro + movimiento procedural sobre el gráfico: rebote y bamboleo
    de zancada, tirón hacia atrás al recibir daño, retroceso al soplar. */
 function drawSprite(o){
   const shooting = o.charging || o.dartCd>.3;
+  /* disparo vertical: mientras carga manda hacia dónde apunta AHORA; después del
+     soplido, hacia dónde salió el dardo (para rematar la animación completa) */
+  const dirV = o.charging? o.aim : o.shotAim;
+  const vertical = (o.charging || o.dartCd>0) && (dirV==='arriba'||dirV==='abajo');
+  const hojaV = dirV==='arriba'? 'up' : 'dn';
   let img, H=P.sprH, ax=null;
   if(o.duck && okO('dk1')){
     /* AGACHADO: hoja propia de 9 cuadros (1-5 levanta y sopla · 6-9 apunta y sopla).
@@ -1688,6 +1826,14 @@ function drawSprite(o){
     else img=OPT.dk1;
   }
   else if(o.hurtT>0 && okO('hurt')) img=OPT.hurt;
+  else if(vertical && okO(hojaV+'1')){
+    /* hojas de 18: 2-4 sube y apunta (según la carga) · 5-12 sopla, sale el dardo,
+       remata y baja (repartidos en el medio segundo de recarga) */
+    let f;
+    if(o.charging) f = o.charge<.25? 2 : o.charge<.6? 3 : 4;
+    else f = Math.min(12, 5+Math.floor((1-Math.max(0,o.dartCd)/.5)*8));
+    img = OPT[hojaV+f] && okO(hojaV+f)? OPT[hojaV+f] : OPT[hojaV+'1'];
+  }
   else if(shooting && okO('sh1')){
     if(o.charging) img=OPT.sh1;                                  // la lleva a la boca
     else if(o.dartCd>.38 && okO('sh2')) img=OPT.sh2;             // el soplido
@@ -1706,6 +1852,12 @@ function drawSprite(o){
     else if(RUN_N>=4){ const i=Math.floor(o.run*P.cyc*(RUN_N/4))%RUN_N; img=OPT['run'+(i+1)]; }
     else { const i=Math.floor(o.run*P.cyc)%4; img=ART['hw'+(i+1)]; }
   }
+  else if((o.aim==='arriba'||o.aim==='abajo') && okO((o.aim==='arriba'?'up':'dn')+'13')){
+    /* quieto y apuntando: reposo mirando arriba/abajo (13-18). Así el jugador ve que
+       el joystick o la tecla ya cambiaron la dirección ANTES de disparar */
+    const h=o.aim==='arriba'?'up':'dn';
+    img = OPT[h+(13+Math.floor(o.animT*5)%6)];
+  }
   else img = okO('idle2')? OPT.idle2 : ART.hidle;
 
   cx.save();
@@ -1715,7 +1867,7 @@ function drawSprite(o){
     cx.rotate(Math.sin(ph*2)*P.sprTilt);
   }
   if(o.hurtT>0 && !okO('hurt')) cx.rotate(-(o.hurtT/.35)*.45);
-  if(o.dartCd>.35 && !o.charging) cx.translate(-3,0);
+  if(o.dartCd>.35 && !o.charging && o.shotAim==='frente') cx.translate(-3,0);   // retroceso sólo al frente
   if(o.charging && o.charge>=1) cx.translate((Math.random()-.5)*1.6,0);
   if(ok(img)) drawAnchored(img,H,ax);
   cx.restore();
@@ -1771,11 +1923,12 @@ function drawFx(cam){
   });
   cx.globalAlpha=1;
   darts.forEach(d=>{
+    const ang=Math.atan2(d.vy||0, d.vx);           // el dardo apunta a donde vuela
     if(okO('dart')){ const im=OPT.dart, H=6, W=im.width/im.height*H;
-      cx.save(); cx.translate(d.x-cam,d.y); cx.scale(Math.sign(d.vx)||1,1);
+      cx.save(); cx.translate(d.x-cam,d.y); cx.rotate(ang);
       cx.drawImage(im,-W/2,-H/2,W,H); cx.restore();
     } else { cx.strokeStyle=GOLD; cx.lineWidth=3;
-      line(d.x-cam,d.y,d.x-cam-Math.sign(d.vx)*14,d.y); }
+      line(d.x-cam,d.y,d.x-cam-Math.cos(ang)*14,d.y-Math.sin(ang)*14); }
   });
 }
 
@@ -1924,14 +2077,16 @@ function drawPortada(){
 
 const CONTROLES_TECLADO=[
   ['A · D   o   ← →','andar'],
-  ['ESPACIO  /  W  /  ↑','saltar'],
-  ['K  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
-  ['S  /  ↓  (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
+  ['ESPACIO   o   Z','saltar'],
+  ['K   o   X   (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
+  ['W · ↑    /    S · ↓   (mantener)','apuntar la cerbatana hacia arriba  /  hacia abajo'],
+  ['C   o   L   (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
   ['E  /  ENTER','atravesar la niebla de copal'],
-  ['ESC','pausa   ·   M  silenciar la música   ·   F  pantalla completa'],
+  ['ESC  ·  M  ·  F','pausa  ·  música  ·  pantalla completa'],
 ];
 const CONTROLES_TACTIL=[
-  ['◀   ▶','andar'],
+  ['joystick','andar: inclinado a medias caminas, a fondo corres'],
+  ['joystick  ↑ / ↓  +  TIRO','disparar hacia arriba  /  hacia abajo'],
   ['SALTO','saltar'],
   ['TIRO  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
   ['AGACH.  (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
@@ -1940,7 +2095,8 @@ const CONTROLES_TACTIL=[
 ];
 const CONTROLES=TOUCH?CONTROLES_TACTIL:CONTROLES_TECLADO;
 const CONSEJOS=[
-  'Las ARAÑAS van pegadas al suelo: sólo las alcanzas agachado.',
+  'Las ARAÑAS van pegadas al suelo: agáchate, o dispárales hacia abajo si las tienes encima.',
+  'Dispara HACIA ARRIBA al tecolote en su percha y a Vucub Caquix cuando vuela.',
   'El ALACRÁN lleva pedernal de frente. Sáltalo y dispárale mientras se gira.',
   'El TECOLOTE no pelea: grita y llama guardianes. Cállalo primero.',
   'Los BRASEROS DE COPAL curan y son el sitio donde vuelves si caes.',
@@ -1953,17 +2109,17 @@ function drawControles(){
   cx.fillText('CONTROLES', CVW/2, 96);
   cx.textAlign='right';
   CONTROLES.forEach((c,i)=>{
-    const y=164+i*44;
+    const y=150+i*38;
     cx.fillStyle=GOLDS; cx.font='700 19px Georgia'; cx.fillText(c[0], CVW/2-26, y);
     cx.textAlign='left'; cx.fillStyle='#c9b282'; cx.font='18px Georgia';
     cx.fillText(c[1], CVW/2+26, y); cx.textAlign='right';
   });
   cx.textAlign='center';
-  cx.strokeStyle='rgba(230,205,139,.3)'; cx.lineWidth=1.5; line(CVW/2-260,442,CVW/2+260,442);
-  cx.fillStyle='#b89a5e'; cx.font='700 13px Georgia'; cx.fillText('DEL LIBRO', CVW/2, 470);
+  cx.strokeStyle='rgba(230,205,139,.3)'; cx.lineWidth=1.5; line(CVW/2-260,410,CVW/2+260,410);
+  cx.fillStyle='#b89a5e'; cx.font='700 13px Georgia'; cx.fillText('DEL LIBRO', CVW/2, 436);
   CONSEJOS.forEach((s,i)=>{
     cx.fillStyle='rgba(201,178,130,.9)'; cx.font='italic 15px Georgia';
-    cx.fillText(s, CVW/2, 498+i*24);
+    cx.fillText(s, CVW/2, 464+i*24);
   });
   cx.fillStyle=GOLDS; cx.font='700 18px Georgia';
   cx.fillText('ESC  ·  volver', CVW/2, CVH-28);
@@ -2010,6 +2166,7 @@ function drawFinal(){
 
 /* ================= TRANSICIONES ================= */
 function empezarPartida(){
+  evento('partida_iniciada', {tactil: TOUCH});
   t.x=400; t.y=GROUND; t.vx=0; t.vy=0; t.face=1; t.onGround=true;
   t.hp=VIDA_MAX; t.inv=1; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
   t.muerto=false; t.muerteT=0; t.run=0; t.jumpsLeft=P.jmax; t.duck=false;
@@ -2031,6 +2188,8 @@ function irPausa(){
   ]);
 }
 function irMuerte(){
+  evento('muerte', {contra_el_jefe: !!(boss&&boss.active),
+                    avance_pct: Math.round(Math.max(0,Math.min(1,(t.x-300)/(BOSSX-300)))*100)});
   SCREEN='muerte';
   menuSet('','',[
     {label:'Volver al brasero de copal', go:()=>revive()},

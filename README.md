@@ -9,14 +9,15 @@ contada con arte de códice.
 
 | Tecla | Acción |
 |---|---|
-| `A` `D` o flechas | andar |
-| `Espacio` / `W` / `↑` | saltar |
-| `K` (mantener y soltar) | cerbatana — cuanto más cargas, más lejos y más fuerte |
-| `S` / `↓` (mantener) | agacharse: no avanzas, pero disparas a ras de suelo |
+| `A` `D` o `←` `→` | andar |
+| `Espacio` o `Z` | saltar |
+| `K` o `X` (mantener y soltar) | cerbatana — cuanto más cargas, más lejos y más fuerte |
+| `W` / `↑` · `S` / `↓` (mantener) | apuntar la cerbatana hacia arriba · hacia abajo |
+| `C` o `L` (mantener) | agacharse: disparo a ras de suelo |
 | `E` / `Enter` | atravesar la niebla de copal |
 | `Esc` · `M` · `F` | pausa · silenciar música · pantalla completa |
 
-En móvil: gira el teléfono; los botones aparecen en pantalla.
+En móvil: gira el teléfono. Joystick a la izquierda para andar; joystick arriba o abajo + **Tiro** para disparar en esa dirección.
 
 ## El recorrido
 
