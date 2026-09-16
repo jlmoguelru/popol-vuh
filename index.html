@@ -225,14 +225,15 @@ const P={ spd:330, accG:2800, accA:1600, fric:0.78, grav:2300, jmp:950,
    son las que hacen que el salto y la carrera se sientan bien */
 const T={ tVar:true, tCoy:true, tSq:true, tLean:true, tDust:true };
 
-const VIDA_MAX=4;                     // cuentas de jade
+let VIDA_MAX=4;                       // cuentas de jade (sube con el potenciador «cuenta de jade»)
+const VIDA_BASE=4;
 
 /* Sello de la build. `_empaquetar.py` lo sustituye por la fecha y hora al generar
    la copia web. Sirve para saber de un vistazo si el aparato que tienes delante
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-16 17:05';
+const VERSION='2026-09-16 20:57';
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -408,7 +409,8 @@ const PR={};
    pedían 34 piezas y sólo se dibujaban 14: el resto eran peticiones y memoria
    gastadas en cada arranque. */
 ['brasero','plataforma','ceiba'].forEach(k=>{ PR[k]=loadImg('prop_'+k,null); });
-['columna_mur','columna_cal','incensario','dintel_mur','caldero','copa','estalagmita',
+['templo','mascaron',
+ 'columna_mur','columna_cal','incensario','dintel_mur','caldero','copa','estalagmita',
  'hierba_alta','hierba_med','hierba_baja','craneos'].forEach(k=>{ PR[k]=loadImg('p_'+k,null); });
 const okP=k=>ok(PR[k]);
 
@@ -1037,6 +1039,104 @@ function HITBOX(e){
   return {cy:e.y-60,hw:42,hh:58};
 }
 
+/* ================================================================
+   LA CASA DE LOS ESCRIBAS · sala de enigmas (PROTOTIPO)
+   Una casa con puerta en la selva. Dentro, Jun Batz' y Jun Chowen —los medios
+   hermanos a los que los gemelos convirtieron en monos, patronos de pintores,
+   escribas y músicos en el Popol Vuh— hablan a través de un mascarón de piedra,
+   explican la dinámica y plantean UN enigma con glifos. Acertar da un potenciador.
+   Todo el texto está en SALA_TEXTO: es contenido de ejemplo para que el
+   divulgador de glifos lo valide o lo sustituya sin tocar la lógica.
+   ================================================================ */
+/* x = centro de la PUERTA en el mundo. Medidas de la puerta sobre p_templo.png
+   (499×341): de x 135 a 195 y de y 175 a 282; la base de los escalones al 94,4 %. */
+const CASA={ x:1790, H:310, puerta:{x0:135/499, x1:195/499, y0:175/341, y1:282/341}, piso:.944 };
+const poderes={ jade:false };
+const sala={ fase:'dialogo', pagina:0, t:0, paginas:[], resuelto:false, intentos:0 };
+const SALA_TEXTO={
+  quien:"JUN BATZ'  y  JUN CHOWEN  ·  los monos escribas",
+  bienvenida:[
+    "¿Junajpú? Hacía mucho que no te veíamos, hermano. Somos Jun Batz' y Jun Chowen.",
+    "Tú y Xbalanqué nos convirtieron en monos… pero nadie nos quitó el oficio: los pintores, los escribas y los músicos nos siguen invocando.",
+    "Esta casa guarda lo que sabían los escribas. Te mostraremos un glifo y te haremos una pregunta.",
+    "Si aciertas, te llevas un don para el camino. Si fallas, te damos una pista y lo intentas otra vez.",
+  ],
+  pregunta:"Los escribas contaban con puntos y barras: cada punto vale 1 y cada barra vale 5. ¿Qué número está grabado en la estela?",
+  numero:13,
+  opciones:['3','8','13','15'],
+  pista:"Cuenta otra vez: cada barra vale cinco, así que las dos barras ya suman diez. Ahora suma los puntos de encima.",
+  acierto:[
+    "¡Trece! Dos barras y tres puntos. Con este sistema los mayas contaban de veinte en veinte, y tenían un signo para el cero.",
+    "El trece es sagrado: en el calendario ritual de 260 días, los números del 1 al 13 se combinan con 20 días. Hasta tu nombre es una fecha de ese calendario: Jun Ajpu, el día Uno Ajpu.",
+    "Toma esta CUENTA DE JADE. Para los mayas el jade era lo más precioso, ligado al aliento y a la vida. Desde ahora resistes un golpe más.",
+  ],
+  yaResuelto:["Ya leíste nuestra estela, hermano. Que el jade te cuide en el camino."],
+};
+const LETRAS_POR_SEG=55;
+
+function casaCerca(){ return SCREEN==='juego' && !t.muerto && t.onGround && Math.abs(t.x-CASA.x)<48; }
+function entrarSala(){
+  if(!casaCerca()) return false;
+  evento('sala_entrada',{ya_resuelta:sala.resuelto});
+  SCREEN='sala'; sala.pagina=0; sala.t=0;
+  t.vx=0; t.charging=false; t.charge=0; slowmo=1;
+  for(const k in keys) keys[k]=false;
+  for(const k in vk) vk[k]=0;
+  if(typeof joySuelta==='function') joySuelta();
+  if(sala.resuelto){ sala.fase='fin'; sala.paginas=SALA_TEXTO.yaResuelto;
+    menuSet('','',[{label:'Volver a la selva', go:salirSala}]); }
+  else { sala.fase='dialogo'; sala.paginas=SALA_TEXTO.bienvenida; menuSet('','',[]); }
+  musPlay('intro'); SFX.umbral();
+  return true;
+}
+function salirSala(){
+  SCREEN='juego'; musPlay('juego');
+  t.x=CASA.x; t.y=GROUND; t.vx=0; t.vy=0; t.onGround=true; t.inv=Math.max(t.inv,.8);
+  if(sala.fase==='acierto') say('CUENTA DE JADE  ·  resistes un golpe más',3.2);
+}
+const salaTexto=()=>sala.paginas[sala.pagina]||'';
+const salaCompleto=()=>sala.t*LETRAS_POR_SEG >= salaTexto().length;
+function salaMenuVisible(){
+  if(!salaCompleto()) return false;
+  if(sala.fase==='enigma'||sala.fase==='pista') return true;
+  if(sala.fase==='acierto'||sala.fase==='fin') return sala.pagina===sala.paginas.length-1;
+  return false;
+}
+function salaAvanza(){
+  if(!salaCompleto()){ sala.t=99; return; }                 // primer toque: termina de escribir
+  if(sala.pagina<sala.paginas.length-1){ sala.pagina++; sala.t=0; SFX.pagina(); return; }
+  if(sala.fase==='dialogo') irEnigma();
+}
+function irEnigma(){
+  sala.fase='enigma'; sala.paginas=[SALA_TEXTO.pregunta]; sala.pagina=0; sala.t=0;
+  menuSet('','',SALA_TEXTO.opciones.map((op,i)=>({label:op, go:()=>responder(i)})));
+  /* sin opción marcada: quien machaca ENTER para pasar el diálogo no debe
+     contestar sin querer la primera respuesta */
+  menu.sel=-1;
+}
+function responder(i){
+  sala.intentos++;
+  const bien = SALA_TEXTO.opciones[i]===String(SALA_TEXTO.numero);
+  evento('enigma_respuesta',{correcta:bien, intento:sala.intentos});
+  sala.pagina=0; sala.t=0;
+  if(bien){
+    sala.resuelto=true; ganarPoder('jade');
+    sala.fase='acierto'; sala.paginas=SALA_TEXTO.acierto;
+    menuSet('','',[{label:'Volver a la selva', go:salirSala}]);
+    SFX.triunfo();
+  } else {
+    sala.fase='pista'; sala.paginas=[SALA_TEXTO.pista];
+    menuSet('','',[{label:'Intentarlo otra vez', go:irEnigma}]);
+    SFX.rebote();
+  }
+}
+function ganarPoder(id){
+  if(id==='jade' && !poderes.jade){
+    poderes.jade=true; VIDA_MAX=VIDA_BASE+1; t.hp=VIDA_MAX;
+    evento('potenciador',{id});
+  }
+}
+
 /* ================= DAÑO, MUERTE Y REAPARICIÓN ================= */
 function hurt(fromX){
   if(t.inv>0 || t.muerto) return;
@@ -1619,9 +1719,169 @@ function drawWorld(cam){
       cx.beginPath(); cx.arc(gx+29,GROUND+37,7,0,7); cx.stroke(); }
     cx.globalAlpha=1;
   }
+  drawCasa(cam);     // antes que la utilería: las ceibas de las costuras quedan delante
   drawProps(cam);
   drawHogueras(cam);
   drawPlatforms(cam);
+}
+
+/* ---------- la casa de los escribas ---------- */
+function casaRect(cam){
+  const im=PR.templo, H=CASA.H, W=im.width/im.height*H;
+  const x0=CASA.x-(CASA.puerta.x0+CASA.puerta.x1)/2*W-cam, y0=GROUND-CASA.piso*H;
+  return {x0,y0,W,H};
+}
+function drawCasa(cam){
+  if(!okP('templo')) return;
+  const r=casaRect(cam);
+  if(r.x0>CVW+20||r.x0+r.W<-20) return;
+  cx.drawImage(PR.templo,r.x0,r.y0,r.W,r.H);
+  /* luz cálida DENTRO del vano: dice «aquí se entra» sin cartel */
+  const px0=r.x0+CASA.puerta.x0*r.W, px1=r.x0+CASA.puerta.x1*r.W;
+  const py0=r.y0+CASA.puerta.y0*r.H, py1=r.y0+CASA.puerta.y1*r.H;
+  const a=(casaCerca()? .55 : .24)+.08*Math.sin(simT*3);
+  cx.save(); cx.beginPath(); cx.rect(px0,py0,px1-px0,py1-py0); cx.clip();
+  const g=cx.createRadialGradient((px0+px1)/2,py1-10,4,(px0+px1)/2,py1-10,(py1-py0)*1.05);
+  g.addColorStop(0,'rgba(240,180,80,'+a+')'); g.addColorStop(1,'rgba(240,180,80,0)');
+  cx.fillStyle=g; cx.fillRect(px0,py0,px1-px0,py1-py0); cx.restore();
+}
+function drawCasaAviso(cam){
+  if(!okP('templo')) return;
+  const r=casaRect(cam), px=CASA.x-cam;
+  if(px<-200||px>CVW+200) return;
+  if(casaCerca()){
+    cx.save(); cx.textAlign='center';
+    cx.globalAlpha=.6+.4*Math.sin(simT*4.5); cx.font='700 17px Georgia';
+    inkText(TOUCH?'TOCA LA PANTALLA PARA ENTRAR':'E  ·  ENTRAR EN LA CASA', px, r.y0-26, RED);
+    cx.globalAlpha=1; cx.font='13px Georgia';
+    inkText(sala.resuelto?'la casa de los escribas':'dentro te espera un enigma', px, r.y0-6, INK, null, 3);
+    cx.restore();
+  } else if(!sala.resuelto && Math.abs(t.x-CASA.x)<520){
+    /* de lejos, un glifo de pregunta flotando sobre la puerta llama la atención */
+    const y=r.y0+CASA.puerta.y0*r.H-22+Math.sin(simT*2.4)*5;
+    cx.save(); cx.textAlign='center'; cx.font='700 26px Georgia';
+    cx.globalAlpha=.75; inkText('?', px, y, GOLD, null, 5); cx.restore();
+  }
+}
+
+/* ---------- numeral maya de puntos y barras ---------- */
+function numeralMaya(n,x,yBase,u){
+  const barras=Math.floor(n/5), puntos=n%5, bh=u*.24, gap=u*.1;
+  cx.save(); cx.lineWidth=Math.max(2.5,u*.035); cx.strokeStyle=INK; cx.fillStyle=RED; cx.lineJoin='round';
+  let y=yBase;
+  for(let b=0;b<barras;b++){
+    y-=bh; cx.beginPath();
+    if(cx.roundRect) cx.roundRect(x-u/2,y,u,bh,bh*.35); else cx.rect(x-u/2,y,u,bh);
+    cx.fill(); cx.stroke(); y-=gap;
+  }
+  if(puntos){
+    const rad=u*.1, sep=u*.26, ancho=(puntos-1)*sep;
+    y-=rad+gap*.4;
+    for(let i=0;i<puntos;i++){ cx.beginPath(); cx.arc(x-ancho/2+i*sep,y,rad,0,7); cx.fill(); cx.stroke(); }
+  }
+  if(n===0){                                   // concha: el cero
+    cx.fillStyle=PAPER; cx.beginPath(); cx.ellipse(x,yBase-u*.25,u*.42,u*.22,0,0,7); cx.fill(); cx.stroke();
+    cx.beginPath(); cx.moveTo(x-u*.3,yBase-u*.25); cx.lineTo(x+u*.3,yBase-u*.25); cx.stroke();
+  }
+  cx.restore();
+}
+
+/* ---------- interior de la sala ---------- */
+const salaSalirRect={x:18,y:16,w:132,h:38};
+function drawSala(){
+  // muro de sillares a la luz de los braseros
+  cx.fillStyle='#21160c'; cx.fillRect(0,0,CVW,CVH);
+  cx.save(); cx.strokeStyle='rgba(201,168,106,.09)'; cx.lineWidth=2;
+  for(let f=0; f*58<460; f++){ const y=70+f*58; line(0,y,CVW,y);
+    for(let x=(f%2?-64:0); x<CVW; x+=128) line(x,y,x,y+58); }
+  cx.restore();
+  const luz=cx.createRadialGradient(CVW/2,280,30,CVW/2,280,640);
+  luz.addColorStop(0,'rgba(230,160,60,'+(.20+.03*Math.sin(simT*5))+')'); luz.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=luz; cx.fillRect(0,0,CVW,CVH);
+  // friso de grecas
+  cx.fillStyle='rgba(156,44,27,.62)'; cx.fillRect(0,64,CVW,30);
+  cx.strokeStyle='rgba(230,205,139,.5)'; cx.lineWidth=2;
+  for(let x=12;x<CVW;x+=44){ cx.strokeRect(x,70,20,18); cx.strokeRect(x+6,76,8,6); }
+  // suelo
+  cx.fillStyle='#2f2013'; cx.fillRect(0,440,CVW,280);
+  cx.strokeStyle='rgba(42,28,16,.8)'; cx.lineWidth=3; line(0,440,CVW,440);
+
+  // braseros con fuego de copal
+  [150,1130].forEach(bx=>{
+    if(okP('brasero')){ const im=PR.brasero, H=110, W=im.width/im.height*H; cx.drawImage(im,bx-W/2,440-H,W,H); }
+    for(let k=0;k<7;k++){
+      const t2=((simT*.6)+hsh(k,bx))%1;
+      voluta(bx+(hsh(k,bx+1)-.5)*22+Math.sin(simT*2+k)*4, 440-112-t2*70, 6+t2*17, simT*.6+k, k%2?GOLDS:RED, 2.8, (1-t2)*.7);
+    }
+  });
+
+  // el mascarón: por él hablan los monos escribas; brilla mientras hablan
+  const hablando=!salaCompleto() && sala.t>0;
+  if(okP('mascaron')){
+    const im=PR.mascaron, H=270, W=im.width/im.height*H, mx=370;
+    if(hablando){ const g=cx.createRadialGradient(mx,440-H*.55,10,mx,440-H*.55,H*.75);
+      g.addColorStop(0,'rgba(120,200,160,'+(.18+.1*Math.sin(simT*14))+')'); g.addColorStop(1,'rgba(120,200,160,0)');
+      cx.fillStyle=g; cx.fillRect(mx-H,440-H*1.3,H*2,H*1.3); }
+    cx.drawImage(im,mx-W/2,440-H,W,H);
+  }
+
+  // la estela con el glifo
+  const ex=880, ew=250, ey=118, eh=312;
+  cx.save();
+  cx.fillStyle=PAPER2; cx.strokeStyle=INK; cx.lineWidth=5;
+  cx.fillRect(ex-ew/2,ey,ew,eh); cx.strokeRect(ex-ew/2,ey,ew,eh);
+  cx.lineWidth=2; cx.strokeStyle='rgba(42,28,16,.55)'; cx.strokeRect(ex-ew/2+14,ey+14,ew-28,eh-28);
+  cx.fillStyle='rgba(42,28,16,.14)'; cx.fillRect(ex-ew/2,ey+eh-10,ew,10);
+  cx.restore();
+  if(sala.fase==='dialogo'){
+    cx.save(); cx.globalAlpha=.35+.15*Math.sin(simT*2); cx.textAlign='center'; cx.fillStyle=INK;
+    cx.font='700 120px Georgia'; cx.fillText('?', ex, ey+eh/2+42); cx.restore();
+  } else numeralMaya(SALA_TEXTO.numero, ex, ey+eh-58, 150);
+
+  // caja de diálogo
+  const bx=70, by=470, bw=CVW-140, bh=230;
+  cx.save();
+  cx.fillStyle='rgba(233,223,196,.96)'; cx.fillRect(bx,by,bw,bh);
+  cx.strokeStyle=INK; cx.lineWidth=3; cx.strokeRect(bx,by,bw,bh);
+  cx.fillStyle=RED; cx.fillRect(bx+22,by-16,520,32); cx.strokeRect(bx+22,by-16,520,32);
+  cx.fillStyle=GOLDS; cx.font='700 15px Georgia'; cx.textAlign='left';
+  cx.fillText(SALA_TEXTO.quien, bx+38, by+5);
+  cx.fillStyle=INK; cx.font='23px Georgia';
+  const lineas=wrap(salaTexto(), bw-80);
+  let quedan=Math.floor(sala.t*LETRAS_POR_SEG);
+  lineas.forEach((l,i)=>{ const v=l.slice(0,Math.max(0,quedan)); quedan-=l.length+1; cx.fillText(v, bx+40, by+56+i*32); });
+  cx.restore();
+
+  // opciones o «seguir»
+  menu.rects=[];
+  if(salaMenuVisible()){
+    const n=menu.items.length, ancho=n>1?170:320, sep=26, total=n*ancho+(n-1)*sep;
+    const oy=by+bh-66;
+    menu.items.forEach((it,i)=>{
+      const x=CVW/2-total/2+i*(ancho+sep), sel=i===menu.sel;
+      menu.rects.push({x,y:oy,w:ancho,h:46});
+      cx.save();
+      cx.fillStyle=sel?RED:PAPER2; cx.strokeStyle=INK; cx.lineWidth=3;
+      cx.fillRect(x,oy,ancho,46); cx.strokeRect(x,oy,ancho,46);
+      cx.fillStyle=sel?GOLDS:INK; cx.font=(n>1?'700 26px':'700 20px')+' Georgia'; cx.textAlign='center';
+      cx.fillText(typeof it.label==='function'?it.label():it.label, x+ancho/2, oy+(n>1?33:30));
+      cx.restore();
+    });
+    if(sala.fase==='enigma'){
+      cx.save(); cx.textAlign='center'; cx.fillStyle='rgba(42,28,16,.6)'; cx.font='italic 14px Georgia';
+      cx.fillText(TOUCH?'toca tu respuesta':'←  →  para elegir   ·   ENTER para responder', CVW/2, by+bh-8); cx.restore();
+    }
+  } else if(salaCompleto()){
+    cx.save(); cx.textAlign='right'; cx.fillStyle=RED; cx.globalAlpha=.5+.5*Math.sin(simT*5);
+    cx.font='700 16px Georgia'; cx.fillText(TOUCH?'toca para seguir  ▸':'ENTER para seguir  ▸', bx+bw-24, by+bh-18); cx.restore();
+  }
+
+  // salir
+  const s0=salaSalirRect;
+  cx.save(); cx.fillStyle='rgba(42,28,16,.7)'; cx.strokeStyle='rgba(230,205,139,.45)'; cx.lineWidth=1.5;
+  cx.fillRect(s0.x,s0.y,s0.w,s0.h); cx.strokeRect(s0.x,s0.y,s0.w,s0.h);
+  cx.fillStyle=GOLDS; cx.font='15px Georgia'; cx.textAlign='center';
+  cx.fillText(TOUCH?'←  salir':'←  salir (ESC)', s0.x+s0.w/2, s0.y+25); cx.restore();
 }
 
 /* ---------- niebla de copal ---------- */
@@ -2081,7 +2341,7 @@ const CONTROLES_TECLADO=[
   ['K   o   X   (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
   ['W · ↑    /    S · ↓   (mantener)','apuntar la cerbatana hacia arriba  /  hacia abajo'],
   ['C   o   L   (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
-  ['E  /  ENTER','atravesar la niebla de copal'],
+  ['E  /  ENTER','entrar en casas  ·  atravesar la niebla de copal'],
   ['ESC  ·  M  ·  F','pausa  ·  música  ·  pantalla completa'],
 ];
 const CONTROLES_TACTIL=[
@@ -2090,7 +2350,7 @@ const CONTROLES_TACTIL=[
   ['SALTO','saltar'],
   ['TIRO  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
   ['AGACH.  (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
-  ['tocar la pantalla','atravesar la niebla de copal (cuando aparece el aviso)'],
+  ['tocar la pantalla','entrar en casas · cruzar la niebla (cuando sale el aviso)'],
   ['botones de arriba','pantalla completa y pausa'],
 ];
 const CONTROLES=TOUCH?CONTROLES_TACTIL:CONTROLES_TECLADO;
@@ -2166,6 +2426,7 @@ function drawFinal(){
 
 /* ================= TRANSICIONES ================= */
 function empezarPartida(){
+  VIDA_MAX=VIDA_BASE; poderes.jade=false; sala.resuelto=false; sala.intentos=0;
   evento('partida_iniciada', {tactil: TOUCH});
   t.x=400; t.y=GROUND; t.vx=0; t.vy=0; t.face=1; t.onGround=true;
   t.hp=VIDA_MAX; t.inv=1; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
@@ -2234,6 +2495,7 @@ function drawJuego(){
   drawChar(snap(),cam);
   drawFx(cam);      // dardos y volutas SOBRE los personajes
   drawGate(cam);    // la niebla va delante: se entra atravesándola
+  drawCasaAviso(cam);
   cx.restore();
   drawHUD();
 }
@@ -2256,6 +2518,17 @@ function onKey(code){
       break;
     case 'juego':
       if(code==='Escape') irPausa();
+      else if(code==='KeyE'||code==='Enter') entrarSala();
+      break;
+    case 'sala':
+      if(code==='Escape'){ salirSala(); break; }
+      if(salaMenuVisible() && menu.items.length>1){
+        if(['ArrowLeft','ArrowUp','KeyA','KeyW'].includes(code)){ menuMove(-1); break; }
+        if(['ArrowRight','ArrowDown','KeyD','KeyS'].includes(code)){ menuMove(1); break; }
+      }
+      if(['Enter','Space','KeyE','KeyK','KeyX'].includes(code)){
+        if(salaMenuVisible()) menuPick(); else salaAvanza();
+      }
       break;
     case 'portada': case 'pausa': case 'muerte': case 'final':
       if(code==='ArrowUp'||code==='KeyW') menuMove(-1);
@@ -2271,8 +2544,14 @@ function onTap(fx,fy){
     case 'cine':   (fx<.25)? cinePrev() : cineNext(); break;
     case 'controles': SCREEN=volverDe; break;
     case 'juego':
-      abrirNiebla();               // el umbral del claro se cruza tocando la pantalla
+      // tocar la pantalla entra en la casa o cruza la niebla, según dónde estés
+      if(!entrarSala()) abrirNiebla();
       break;
+    case 'sala': {
+      const x=fx*CVW, y=fy*CVH, r=salaSalirRect;
+      if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){ salirSala(); break; }
+      if(salaMenuVisible()) menuTap(fx,fy); else salaAvanza();
+      break; }
     case 'portada': case 'pausa': case 'muerte': case 'final': menuTap(fx,fy); break;
   }
 }
@@ -2301,6 +2580,7 @@ function frame(now){
     case 'pausa':     drawJuego(); drawPausa(); break;
     case 'muerte':    drawJuego(); drawMuerte(); break;
     case 'final':     drawFinal(); break;
+    case 'sala':      sala.t+=raw; drawSala(); break;
     default:          cx.fillStyle='#0d0905'; cx.fillRect(0,0,CVW,CVH);
   }
 }
