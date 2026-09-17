@@ -69,9 +69,9 @@
          padding:0 calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom))
                  calc(14px + env(safe-area-inset-left)); pointer-events:none; z-index:30;}
   body.touch.playing #tbtns{display:flex;}
-  .tb{pointer-events:auto; width:66px; height:66px; border-radius:50%;
+  .tb{pointer-events:auto; width:84px; height:84px; border-radius:50%;
       background:rgba(42,28,16,.62); border:2px solid rgba(230,205,139,.45);
-      color:var(--golds); font-size:12px; display:flex; align-items:center; justify-content:center;
+      color:var(--golds); font-size:14px; display:flex; align-items:center; justify-content:center;
       user-select:none; -webkit-user-select:none; touch-action:none;}
   .tb.on{background:rgba(156,44,27,.8);}
   /* joystick: horizontal para andar, arriba/abajo para apuntar la cerbatana */
@@ -90,9 +90,11 @@
   .joy i.o{left:7px;   top:50%;  margin-top:-6px;  border-right-color:#e6cd8b;}
   .joy i.e{right:7px;  top:50%;  margin-top:-6px;  border-left-color:#e6cd8b;}
   .joy i.vivo{opacity:1;}
-  .tgrp{display:flex; gap:10px; align-items:flex-end;}
-  @media (max-height:520px){ .tb{width:54px;height:54px;font-size:11px;}
-    .joy{width:108px;height:108px;} .joy .perilla{width:48px;height:48px;margin:-24px 0 0 -24px;} }
+  .tgrp{display:flex; gap:13px; align-items:flex-end;}
+  /* en pantallas bajas se encogen, pero mucho menos que antes: con 54 px era fácil
+     fallar el botón de saltar o el de tiro en plena pelea */
+  @media (max-height:520px){ .tb{width:74px;height:74px;font-size:13px;}
+    .joy{width:112px;height:112px;} .joy .perilla{width:50px;height:50px;margin:-25px 0 0 -25px;} }
 
   /* ---------- vertical: el juego es 16:9, en retrato quedaría una franja ---------- */
   #gira{position:fixed; left:0; top:0; width:var(--vw); height:var(--vh); z-index:50; display:none; flex-direction:column;
@@ -233,7 +235,7 @@ const VIDA_BASE=4;
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-16 20:57';
+const VERSION='2026-09-17 19:45';
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -310,6 +312,7 @@ const RUTAS={
   escenaFiles:['bioma1','bioma1_1','bioma1_2','bioma1_3','bioma1_4'],
   codice:'assets/codice/', codExt:'.jpg',
   codiceFiles:['panel1','panel2','panel3','panel4','panel5','panel6','panel7','panel8'],
+  interior:'assets/escenas/', interiorFile:'casa_interior', interiorExt:'.jpg',
   musica:{ intro:'assets/musica/intro.mp3', juego:'assets/musica/juego.mp3' }
 };
 /* ---- RUTAS:FIN ---- */
@@ -409,10 +412,16 @@ const PR={};
    pedían 34 piezas y sólo se dibujaban 14: el resto eran peticiones y memoria
    gastadas en cada arranque. */
 ['brasero','plataforma','ceiba'].forEach(k=>{ PR[k]=loadImg('prop_'+k,null); });
-['templo','mascaron',
+['templo',
  'columna_mur','columna_cal','incensario','dintel_mur','caldero','copa','estalagmita',
  'hierba_alta','hierba_med','hierba_baja','craneos'].forEach(k=>{ PR[k]=loadImg('p_'+k,null); });
 const okP=k=>ok(PR[k]);
+
+/* --- la casa de los escribas: interior y los dos monos, con sus cuatro caras
+       (1 alegre · 2 serio · 3 enojado · 4 riendo) --- */
+const SALA_FONDO=loadImg(RUTAS.interiorFile,null,RUTAS.interior,RUTAS.interiorExt);
+const MONO={b:[],c:[]};
+for(let i=1;i<=4;i++){ MONO.b[i]=loadImg('mono_b'+i,null); MONO.c[i]=loadImg('mono_c'+i,null); }
 
 /* --- láminas de la cinemática del brazo --- */
 const CINE_IMGS=[1,2,3,4,5,6,7,8].map(i=>loadImg('cine_brazo_'+i,null,DIR,'.jpg'));
@@ -530,6 +539,7 @@ const SFX={
   jefeHit:()=>{ tone({type:'sawtooth',f0:700,f1:220,d:.26,v:.18,filt:2200}); puff({f0:2200,f1:500,d:.2,v:.16}); },
   choque:()=>{ tone({type:'sine',f0:110,f1:40,d:.5,v:.36}); puff({f0:500,f1:90,d:.45,v:.26,q:.5}); },
   pagina:()=>{ puff({f0:3200,f1:900,d:.19,v:.12,q:.6}); },
+  tela:()=>{ puff({f0:1500,f1:300,d:.26,v:.20,q:.5}); tone({type:'sine',f0:260,f1:90,d:.22,v:.12}); },
   triunfo:()=>{ [523,659,784,1047,1319].forEach((f,i)=>tone({type:'triangle',f0:f,d:1.1,v:.14,delay:i*.13,atk:.04})); },
   derrota:()=>{ [440,392,330,262].forEach((f,i)=>tone({type:'sine',f0:f,d:.9,v:.16,delay:i*.17,atk:.03})); }
 };
@@ -678,8 +688,9 @@ const t={ x:400, y:GROUND, vx:0, vy:0, face:1, onGround:true,
   jumpsLeft:1, jumpHeld:false, run:0, animT:0, duck:false,
   hp:VIDA_MAX, hurtT:0, inv:0, charging:false, charge:0, dartCd:0,
   coyote:0, jbuf:0, squash:0, stretch:0, muerto:false, muerteT:0,
-  aim:'frente', shotAim:'frente' };
-const darts=[], parts=[], feathers=[];
+  aim:'frente', shotAim:'frente', web:0 };
+const darts=[], parts=[], feathers=[], telas=[];
+let avisoTela=false;                  // el aviso de «forcejea» sólo la primera vez
 let foes=[], boss=null;
 let notice={txt:'',t:0};
 function say(txt,d){ notice={txt,t:d||2.2}; }
@@ -718,12 +729,24 @@ const mkEsq=x=>({kind:'esq',x,baseX:x,y:GROUND,face:-1,hp:60,maxhp:60,state:'pat
   t:Math.random()*6,vx:0,hitCd:0,atkT:0,wt:0,deadT:0});
 const araHangY=a=>a+Math.min(150,(GROUND-a)*.55);
 const mkAra=(x,anchorY)=>({kind:'ara',x,baseX:x,anchorY,y:araHangY(anchorY),face:-1,
-  hp:45,maxhp:45,state:'hang',t:Math.random()*4,vx:0,hitCd:0,wt:0,cool:0,deadT:0});
+  hp:45,maxhp:45,state:'hang',t:Math.random()*4,vx:0,hitCd:0,wt:0,cool:0,
+  escupeCd:1.5+Math.random()*2,deadT:0});
 const mkAla=x=>({kind:'ala',x,baseX:x,y:GROUND,face:-1,hp:80,maxhp:80,state:'patrol',
   t:Math.random()*5,vx:0,hitCd:0,wt:0,cool:0,turn:0,blockT:0,turnTo:-1,hitDone:false,deadT:0});
 const mkTec=(x,perchY)=>({kind:'tec',x,baseX:x,perchY,y:perchY,face:-1,hp:35,maxhp:35,
   state:'perch',t:Math.random()*4,vx:0,vy:0,hitCd:0,wt:0,cool:0,calls:0,deadT:0});
 
+function lanzaTela(e){
+  const ox=e.x+e.face*16, oy=e.y-EH.ara*.45;
+  const dx=t.x-ox, dy=(t.y-46)-oy, m=Math.hypot(dx,dy)||1;
+  telas.push({x:ox,y:oy,vx:dx/m*340,vy:dy/m*340-50,life:2.4,rot:0});
+  SFX.tela();
+}
+function enredar(){
+  if(t.web>0||t.muerto) return;
+  t.web=1.5; burst(t.x,t.y-50,BONE,10); SFX.tela(); sacude(5,.2);
+  if(!avisoTela){ avisoTela=true; say('¡telaraña!  muévete para zafarte',2.4); }
+}
 function spawnFoes(){
   foes=[
     mkEsq(2250), mkEsq(3700), mkEsq(5150),
@@ -731,7 +754,7 @@ function spawnFoes(){
     mkAla(3200), mkAla(6050),
     mkTec(platMid(2430),GROUND-270), mkTec(5960,GROUND-210),
   ];
-  darts.length=0; parts.length=0;
+  darts.length=0; parts.length=0; telas.length=0; t.web=0;
   spawnBoss();
 }
 
@@ -746,7 +769,7 @@ const ARENA_L=6180, ARENA_R=LEVEL-110;
 const T_BRAZO=55, T_CAIDA=105;
 function spawnBoss(){
   boss={x:BOSSX,y:CANOPY_Y,vx:0,vy:0,face:-1,hp:300,maxhp:300,
-        state:'canopy',t:0,st:0,wt:3.2,active:false,hitCd:0,next:'dive',armCine:false,
+        state:'canopy',t:0,st:0,wt:1.6,active:false,hitCd:0,next:'dive',armCine:false,
         dead:false,deadT:0,tx:0,ty:0,gustN:0,fightT:0};
   feathers.length=0;
 }
@@ -776,7 +799,7 @@ function updBoss(dt){
       if(boss.wt<=0) bossGo('descend');
       break;
     case 'descend':
-      boss.y+=(GROUND-boss.y)*2.2*dt; boss.x+=(BOSSX-50-boss.x)*2*dt;
+      boss.y+=(GROUND-boss.y)*3.4*dt; boss.x+=(BOSSX-50-boss.x)*3*dt;
       if(GROUND-boss.y<10){ boss.y=GROUND; bossGo('eat',3.6);
         /* el aviso sólo dentro del claro: el ciclo del jefe corre desde el
            principio del nivel y si no, el cartel saltaba en plena selva */
@@ -788,7 +811,7 @@ function updBoss(dt){
       break;
     case 'ascend':
       boss.y+=(CANOPY_Y-boss.y)*2*dt; boss.x+=(BOSSX-boss.x)*2*dt;
-      if(boss.y-CANOPY_Y<10) bossGo('canopy',3.2);
+      if(boss.y-CANOPY_Y<10) bossGo('canopy',2.0);
       break;
     case 'rise':
       boss.y+=(HOVER_Y-boss.y)*2.5*dt;
@@ -904,6 +927,9 @@ function abrirNiebla(){
   evento('niebla_cruzada');
   gate.open=true; gate.flash=2.6; t.inv=Math.max(t.inv,1.2); t.hp=VIDA_MAX;
   checkpoint=GATE_X+120;
+  /* al entrar en el claro, el falso sol baja enseguida: esperar a que terminara su
+     ronda por la copa dejaba varios segundos muertos justo al llegar */
+  if(boss && !boss.active && boss.state==='canopy') boss.wt=Math.min(boss.wt,.8);
   say('EL CLARO DEL NANCE · dominio de Vucub Caquix',3.4);
   burst(GATE_X,GROUND-60,GOLDS,14); SFX.umbral();
   return true;
@@ -939,10 +965,16 @@ function updFoes(dt){
       e.x+=e.vx*dt; e.vx*=.85;
     } else if(e.kind==='ara'){
       /* ARAÑA — duerme colgada del techo, se descuelga por el hilo cuando pasas
-         debajo, persigue a ras de suelo y muerde. */
-      e.cool=Math.max(0,e.cool-dt);
-      if(e.state==='hang'){ e.y=araHangY(e.anchorY); e.face=Math.sign(d)||1;
-        if(ad<230 && e.cool<=0){ e.state='drop'; e.wt=0; } }
+         debajo, persigue a ras de suelo y muerde. A media distancia ESCUPE una
+         telaraña que te deja pegado unos segundos: así también es peligrosa de
+         lejos y obliga a moverse, no sólo a esperarla. */
+      e.cool=Math.max(0,e.cool-dt); e.escupeCd=Math.max(0,e.escupeCd-dt);
+      if(e.state==='spit'){ e.wt-=dt; e.face=Math.sign(d)||e.face;
+        if(e.wt<=0){ lanzaTela(e); e.escupeCd=3.4+Math.random(); e.cool=.7;
+          e.state = e.y<GROUND-2? 'hang' : 'chase'; } }
+      else if(e.state==='hang'){ e.y=araHangY(e.anchorY); e.face=Math.sign(d)||1;
+        if(ad<230 && e.cool<=0){ e.state='drop'; e.wt=0; }
+        else if(ad<520 && e.escupeCd<=0 && t.web<=0){ e.state='spit'; e.wt=.5; } }
       else if(e.state==='drop'){ e.y+=430*dt; e.face=Math.sign(d)||1;
         if(e.y>=GROUND){ e.y=GROUND; e.state='chase'; e.wt=0; } }
       else if(e.state==='windup'){ e.wt-=dt; e.face=Math.sign(d)||e.face;
@@ -951,7 +983,8 @@ function updFoes(dt){
       else if(e.state==='bite'){ e.wt-=dt; e.x+=e.face*260*dt;
         if(e.wt<=0){ e.state='chase'; e.cool=.75; } }
       else { e.state='chase'; e.face=Math.sign(d)||1;
-        if(ad>72) e.x+=e.face*175*dt;
+        if(ad>150 && ad<440 && e.escupeCd<=0 && e.cool<=0 && t.web<=0){ e.state='spit'; e.wt=.5; }
+        else if(ad>72) e.x+=e.face*175*dt;
         else if(e.cool<=0){ e.state='windup'; e.wt=.38; }
         if(ad>820) e.x+=(e.baseX-e.x)*.7*dt; }
       e.x+=e.vx*dt; e.vx*=.85;
@@ -968,7 +1001,9 @@ function updFoes(dt){
         e.x+=(want>0?-1:1)*6; }
       else if(e.state==='sting'){ e.wt-=dt;
         if(e.wt<=.15 && !e.hitDone){ e.hitDone=true;
-          if(ad<170 && Math.sign(d)===e.face && aLaAltura(e)) hurt(e.x); }
+          /* el aguijón hace DOBLE daño: es el enemigo pesado del bioma y así
+             obliga de verdad a rodearlo en vez de comerse el golpe */
+          if(ad<170 && Math.sign(d)===e.face && aLaAltura(e)) hurt(e.x,2); }
         if(e.wt<=0){ e.state='guard'; e.cool=1.1; e.hitDone=false; } }
       else if(ad<430){
         if(ad<200 && e.cool<=0 && Math.sign(d)===e.face){ e.state='sting'; e.wt=.72; e.hitDone=false; }
@@ -1007,8 +1042,22 @@ function updFoes(dt){
   foes.forEach(e=>{ if(e.hp>0 && e.x>GATE_X-46){
     e.x=GATE_X-46; if(e.state==='chase'||e.state==='guard') e.face=-1; } });
 
+  // telarañas en vuelo
+  telas.forEach(w=>{
+    w.x+=w.vx*dt; w.y+=w.vy*dt; w.vy+=280*dt; w.life-=dt; w.rot+=7*dt;
+    if(w.life>0 && !t.muerto && t.web<=0 && t.inv<=0 &&
+       Math.abs(w.x-t.x)<30 && Math.abs(w.y-(t.y-50))<48){ w.life=0; enredar(); }
+    if(w.life>0 && w.y>=GROUND-2){ w.life=0; burst(w.x,GROUND-2,BONE,3); }
+  });
+  for(let i=telas.length-1;i>=0;i--) if(telas[i].life<=0) telas.splice(i,1);
+
   // dardos contra el jefe y contra los enemigos
   darts.forEach(dd=>{
+    if(dd.life<=0) return;
+    telas.forEach(w=>{                       // un dardo revienta la telaraña en el aire
+      if(w.life>0 && Math.abs(dd.x-w.x)<22 && Math.abs(dd.y-w.y)<20){
+        w.life=0; dd.life=0; burst(w.x,w.y,BONE,6); SFX.clavo(); }
+    });
     if(dd.life<=0) return;
     bossDartHit(dd);
     if(dd.life<=0) return;
@@ -1055,11 +1104,15 @@ const poderes={ jade:false };
 const sala={ fase:'dialogo', pagina:0, t:0, paginas:[], resuelto:false, intentos:0 };
 const SALA_TEXTO={
   quien:"JUN BATZ'  y  JUN CHOWEN  ·  los monos escribas",
+  /* Esta primera casa es el tutorial: explica en pocas frases CÓMO funcionarán
+     todas las casas de enigmas, y luego pone el ejemplo del 13. */
   bienvenida:[
-    "¿Junajpú? Hacía mucho que no te veíamos, hermano. Somos Jun Batz' y Jun Chowen.",
+    "¿Junajpú? Hacía mucho que no te veíamos, hermano. Somos Jun Batz' y Jun Chowen, los escribas.",
     "Tú y Xbalanqué nos convirtieron en monos… pero nadie nos quitó el oficio: los pintores, los escribas y los músicos nos siguen invocando.",
-    "Esta casa guarda lo que sabían los escribas. Te mostraremos un glifo y te haremos una pregunta.",
-    "Si aciertas, te llevas un don para el camino. Si fallas, te damos una pista y lo intentas otra vez.",
+    "Escucha cómo funciona esto. En el camino hay más casas como esta, y algunas están escondidas: fíjate en las piedras con luz en la puerta.",
+    "En cada una verás un glifo en la estela y te haremos UNA pregunta sobre él. Cuatro respuestas; sólo una es la buena.",
+    "Si aciertas, te llevas un don que te acompaña hasta el final del viaje. Si fallas, te damos una pista y vuelves a intentarlo: aquí no se pierde nada por equivocarse.",
+    "Empecemos por lo primero que aprende un escriba: los números.",
   ],
   pregunta:"Los escribas contaban con puntos y barras: cada punto vale 1 y cada barra vale 5. ¿Qué número está grabado en la estela?",
   numero:13,
@@ -1079,7 +1132,7 @@ function entrarSala(){
   if(!casaCerca()) return false;
   evento('sala_entrada',{ya_resuelta:sala.resuelto});
   SCREEN='sala'; sala.pagina=0; sala.t=0;
-  t.vx=0; t.charging=false; t.charge=0; slowmo=1;
+  t.vx=0; t.charging=false; t.charge=0; slowmo=1; t.web=0;
   for(const k in keys) keys[k]=false;
   for(const k in vk) vk[k]=0;
   if(typeof joySuelta==='function') joySuelta();
@@ -1138,18 +1191,21 @@ function ganarPoder(id){
 }
 
 /* ================= DAÑO, MUERTE Y REAPARICIÓN ================= */
-function hurt(fromX){
+function hurt(fromX,dano){
   if(t.inv>0 || t.muerto) return;
-  t.inv=.95; t.hurtT=.35; t.hp--;
+  const d=dano||1;
+  t.inv=.95; t.hurtT=.35; t.hp-=d;
   if(t.charging){ t.charging=false; slowmo=1; t.charge=0; }
-  t.vx=Math.sign(t.x-fromX||-t.face)*220; t.vy=-180; t.onGround=false;
-  burst(t.x,t.y-60,RED,10); SFX.golpe(); sacude(9,.28); congela(.06);
+  t.web=0;                                   // el golpe rompe la telaraña
+  t.vx=Math.sign(t.x-fromX||-t.face)*(d>1?300:220); t.vy=-180; t.onGround=false;
+  burst(t.x,t.y-60,RED,d>1?18:10); SFX.golpe();
+  sacude(d>1?15:9, d>1?.42:.28); congela(d>1?.10:.06);
   if(t.hp<=0){ t.hp=0; t.muerto=true; t.muerteT=0; SFX.derrota(); }
 }
 function revive(){
   t.x=checkpoint; t.y=GROUND; t.vx=0; t.vy=0; t.onGround=true; t.face=1;
   t.hp=VIDA_MAX; t.inv=1.6; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
-  t.muerto=false; t.muerteT=0; t.jumpsLeft=P.jmax; slowmo=1; paused=false;
+  t.muerto=false; t.muerteT=0; t.jumpsLeft=P.jmax; slowmo=1; paused=false; t.web=0;
   spawnFoes();
   if(checkpoint>GATE_X){ gate.open=true; say('el falso sol sube al nance… espera a que baje',3); }
   SCREEN='juego';
@@ -1181,20 +1237,28 @@ function shootDart(){
 /* ================= CONTROL ================= */
 function control(dt){
   const accel=t.onGround?P.accG:P.accA;
-  t.duck = DUCK() && t.onGround;
+  /* Enredado en una telaraña: no anda ni salta, pero SÍ puede disparar — dejar al
+     jugador totalmente inútil se siente injusto. Y moverse acorta el forcejeo:
+     de 1,5 s quieto a ~0,6 s si reaccionas. */
+  if(t.web>0){
+    t.web-=dt*(1+((L()||R()||JUMP()||vk.ax)?1.8:0));
+    if(t.web<=0){ t.web=0; burst(t.x,t.y-50,BONE,6); }
+  }
+  const enredado=t.web>0;
+  t.duck = DUCK() && t.onGround && !enredado;
   /* hacia dónde apunta la cerbatana; agachado siempre dispara al frente, a ras de suelo */
   t.aim = t.duck? 'frente' : AIM_UP()? 'arriba' : AIM_DN()? 'abajo' : 'frente';
   /* eje de marcha: el teclado da -1/0/1; el joystick da un valor intermedio que
      limita la velocidad, así inclinado a medias Junajpú camina en vez de correr */
   let eje=0;
-  if(!t.charging){ if(L())eje=-1; if(R())eje=1; if(vk.ax) eje=vk.ax; }
+  if(!t.charging && !enredado){ if(L())eje=-1; if(R())eje=1; if(vk.ax) eje=vk.ax; }
   let intent=Math.sign(eje);
   const vmax=P.spd*Math.min(1,Math.abs(eje)||1);
   if(t.duck){ if(intent!==0 && !t.charging) t.face=intent;   // agachado se gira, no avanza
     intent=0; t.vx=0; }
   if(intent!==0){ t.face=intent; t.vx+=intent*accel*dt;
     t.vx=Math.max(-vmax,Math.min(vmax,t.vx));
-  } else t.vx*= t.onGround? (t.charging?.55:P.fric) : .96;
+  } else t.vx*= t.onGround? ((t.charging||enredado)?.55:P.fric) : .96;
 
   // — salto (coyote time + buffer) —
   t.coyote=t.onGround? .1 : Math.max(0,t.coyote-dt);
@@ -1202,7 +1266,7 @@ function control(dt){
   const wantJump=JUMP();
   if(wantJump && !t.jumpHeld){ t.jbuf=.12; t.jumpHeld=true; }
   if(!wantJump) t.jumpHeld=false;
-  if(t.jbuf>0 && !t.charging && !t.duck){
+  if(t.jbuf>0 && !t.charging && !t.duck && !enredado){
     if(t.coyote>0 || t.jumpsLeft>0){
       const first=t.coyote>0||t.jumpsLeft===P.jmax;
       t.vy = first? -P.jmp : -P.jmp*0.875;
@@ -1788,55 +1852,69 @@ function numeralMaya(n,x,yBase,u){
 
 /* ---------- interior de la sala ---------- */
 const salaSalirRect={x:18,y:16,w:132,h:38};
+/* Qué cara pone cada hermano. 1 alegre · 2 serio · 3 enojado · 4 riendo.
+   Las caras cuentan la escena: se enfadan al recordar que los convirtieron en
+   monos, se ríen si fallas y celebran si aciertas. */
+function carasMonos(){
+  if(sala.fase==='acierto') return [4,4];
+  if(sala.fase==='pista')   return [3,4];
+  if(sala.fase==='fin')     return [1,1];
+  if(sala.fase==='enigma')  return [2,2];
+  return sala.pagina===0? [1,2] : sala.pagina===1? [3,3] : [2,2];
+}
+function dibujaMono(im,x,pies,alto,habla){
+  if(!ok(im)) return;
+  const bob=habla? Math.sin(simT*7)*3 : Math.sin(simT*1.6+x)*1.5;
+  const W=im.width/im.height*alto;
+  cx.save(); cx.globalAlpha=.22; cx.fillStyle='#000';
+  cx.beginPath(); cx.ellipse(x,pies,W*.36,9,0,0,7); cx.fill(); cx.restore();
+  cx.drawImage(im,x-W/2,pies-alto+bob,W,alto);
+}
 function drawSala(){
-  // muro de sillares a la luz de los braseros
-  cx.fillStyle='#21160c'; cx.fillRect(0,0,CVW,CVH);
-  cx.save(); cx.strokeStyle='rgba(201,168,106,.09)'; cx.lineWidth=2;
-  for(let f=0; f*58<460; f++){ const y=70+f*58; line(0,y,CVW,y);
-    for(let x=(f%2?-64:0); x<CVW; x+=128) line(x,y,x,y+58); }
-  cx.restore();
-  const luz=cx.createRadialGradient(CVW/2,280,30,CVW/2,280,640);
-  luz.addColorStop(0,'rgba(230,160,60,'+(.20+.03*Math.sin(simT*5))+')'); luz.addColorStop(1,'rgba(0,0,0,0)');
-  cx.fillStyle=luz; cx.fillRect(0,0,CVW,CVH);
-  // friso de grecas
-  cx.fillStyle='rgba(156,44,27,.62)'; cx.fillRect(0,64,CVW,30);
-  cx.strokeStyle='rgba(230,205,139,.5)'; cx.lineWidth=2;
-  for(let x=12;x<CVW;x+=44){ cx.strokeRect(x,70,20,18); cx.strokeRect(x+6,76,8,6); }
-  // suelo
-  cx.fillStyle='#2f2013'; cx.fillRect(0,440,CVW,280);
-  cx.strokeStyle='rgba(42,28,16,.8)'; cx.lineWidth=3; line(0,440,CVW,440);
-
-  // braseros con fuego de copal
-  [150,1130].forEach(bx=>{
-    if(okP('brasero')){ const im=PR.brasero, H=110, W=im.width/im.height*H; cx.drawImage(im,bx-W/2,440-H,W,H); }
-    for(let k=0;k<7;k++){
-      const t2=((simT*.6)+hsh(k,bx))%1;
-      voluta(bx+(hsh(k,bx+1)-.5)*22+Math.sin(simT*2+k)*4, 440-112-t2*70, 6+t2*17, simT*.6+k, k%2?GOLDS:RED, 2.8, (1-t2)*.7);
-    }
-  });
-
-  // el mascarón: por él hablan los monos escribas; brilla mientras hablan
-  const hablando=!salaCompleto() && sala.t>0;
-  if(okP('mascaron')){
-    const im=PR.mascaron, H=270, W=im.width/im.height*H, mx=370;
-    if(hablando){ const g=cx.createRadialGradient(mx,440-H*.55,10,mx,440-H*.55,H*.75);
-      g.addColorStop(0,'rgba(120,200,160,'+(.18+.1*Math.sin(simT*14))+')'); g.addColorStop(1,'rgba(120,200,160,0)');
-      cx.fillStyle=g; cx.fillRect(mx-H,440-H*1.3,H*2,H*1.3); }
-    cx.drawImage(im,mx-W/2,440-H,W,H);
+  // fondo: el interior de la casa de los escribas
+  if(ok(SALA_FONDO)){
+    const a=SALA_FONDO.naturalWidth/SALA_FONDO.naturalHeight, ca=CVW/CVH;
+    let w,h; if(a>ca){ h=CVH; w=h*a; } else { w=CVW; h=w/a; }
+    cx.drawImage(SALA_FONDO,(CVW-w)/2,(CVH-h)/2,w,h);
+  } else {                                   // respaldo si la lámina no cargó
+    cx.fillStyle='#21160c'; cx.fillRect(0,0,CVW,CVH);
+    cx.save(); cx.strokeStyle='rgba(201,168,106,.09)'; cx.lineWidth=2;
+    for(let f=0; f*58<460; f++){ const y=70+f*58; line(0,y,CVW,y);
+      for(let x=(f%2?-64:0); x<CVW; x+=128) line(x,y,x,y+58); }
+    cx.restore();
   }
+  // las antorchas del fondo laten
+  cx.save(); cx.globalCompositeOperation='lighter';
+  [126,352,1024,1250].forEach((fx,i)=>{
+    const g=cx.createRadialGradient(fx,250,6,fx,250,150);
+    const p=.10+.04*Math.sin(simT*6+i*1.7);
+    g.addColorStop(0,'rgba(255,190,90,'+p+')'); g.addColorStop(1,'rgba(255,190,90,0)');
+    cx.fillStyle=g; cx.fillRect(fx-150,100,300,300);
+  });
+  cx.restore();
 
-  // la estela con el glifo
-  const ex=880, ew=250, ey=118, eh=312;
+  // la estela con el glifo, en el pasillo central
+  const ex=640, ew=214, ey=118, eh=300;
   cx.save();
+  cx.fillStyle='rgba(42,28,16,.28)';
+  cx.beginPath(); cx.ellipse(ex,ey+eh+6,ew*.55,12,0,0,7); cx.fill();
   cx.fillStyle=PAPER2; cx.strokeStyle=INK; cx.lineWidth=5;
   cx.fillRect(ex-ew/2,ey,ew,eh); cx.strokeRect(ex-ew/2,ey,ew,eh);
-  cx.lineWidth=2; cx.strokeStyle='rgba(42,28,16,.55)'; cx.strokeRect(ex-ew/2+14,ey+14,ew-28,eh-28);
-  cx.fillStyle='rgba(42,28,16,.14)'; cx.fillRect(ex-ew/2,ey+eh-10,ew,10);
+  cx.fillStyle='rgba(42,28,16,.10)'; cx.fillRect(ex-ew/2+13,ey+13,ew-26,eh-26);
+  cx.lineWidth=2; cx.strokeStyle='rgba(42,28,16,.5)'; cx.strokeRect(ex-ew/2+13,ey+13,ew-26,eh-26);
+  cx.fillStyle=INK;                       // muescas talladas en la cornisa
+  for(let i=0;i<5;i++) cx.fillRect(ex-ew/2+18+i*(ew-36)/4-4,ey-7,8,7);
   cx.restore();
   if(sala.fase==='dialogo'){
-    cx.save(); cx.globalAlpha=.35+.15*Math.sin(simT*2); cx.textAlign='center'; cx.fillStyle=INK;
+    cx.save(); cx.globalAlpha=.32+.13*Math.sin(simT*2); cx.textAlign='center'; cx.fillStyle=INK;
     cx.font='700 120px Georgia'; cx.fillText('?', ex, ey+eh/2+42); cx.restore();
-  } else numeralMaya(SALA_TEXTO.numero, ex, ey+eh-58, 150);
+  } else numeralMaya(SALA_TEXTO.numero, ex, ey+eh-52, 140);
+
+  // los hermanos, uno a cada lado; el que habla se mueve un poco más
+  const [cb,cc]=carasMonos(), hablaB=sala.pagina%2===0;
+  /* los pies justo encima de la caja de diálogo (que empieza en y=470) */
+  dibujaMono(MONO.b[cb], 250, 462, 288, hablaB && !salaCompleto());
+  dibujaMono(MONO.c[cc],1030, 462, 288, !hablaB && !salaCompleto());
 
   // caja de diálogo
   const bx=70, by=470, bw=CVW-140, bh=230;
@@ -1856,7 +1934,7 @@ function drawSala(){
   menu.rects=[];
   if(salaMenuVisible()){
     const n=menu.items.length, ancho=n>1?170:320, sep=26, total=n*ancho+(n-1)*sep;
-    const oy=by+bh-66;
+    const oy=by+bh-78;
     menu.items.forEach((it,i)=>{
       const x=CVW/2-total/2+i*(ancho+sep), sel=i===menu.sel;
       menu.rects.push({x,y:oy,w:ancho,h:46});
@@ -1979,7 +2057,7 @@ function drawFoes(cam){
         line(sx+Math.cos(a)*7,sy+Math.sin(a)*7,sx+Math.cos(a)*16,sy+Math.sin(a)*16); }
       cx.restore();
     }
-    if(!dying && (e.state==='windup'||e.state==='cry'||e.state==='sting')){
+    if(!dying && (e.state==='windup'||e.state==='cry'||e.state==='sting'||e.state==='spit')){
       cx.font='700 22px Georgia'; cx.textAlign='center';
       inkText('!',px,e.y-(TOPY[e.kind]||60),RED);
     }
@@ -2169,6 +2247,20 @@ function drawChar(o,cam){
   const sq=1-o.squash*1.4+o.stretch*.9; cx.scale(2-sq,sq); // squash & stretch
   if(artOk()) drawSprite(o); else puppet(o);
   cx.restore();
+  if(t.web>0 && !t.muerto){                 // hilos pegados encima del personaje
+    cx.save(); cx.translate(o.x-cam,o.y);
+    const j=Math.sin(simT*40)*1.6;          // tirones del forcejeo
+    cx.translate(j,0);
+    cx.globalAlpha=Math.min(1,t.web*1.6)*.9;
+    cx.strokeStyle=BONE; cx.lineWidth=2.2; cx.lineCap='round';
+    const cyw=-56, R=50;
+    for(let i=0;i<10;i++){ const a=i*Math.PI/5;                 // hilos en todas direcciones
+      line(Math.cos(a)*R,cyw+Math.sin(a)*R*.86,Math.cos(a)*-R,cyw-Math.sin(a)*R*.86); }
+    cx.lineWidth=1.7;
+    for(let r=16;r<=R;r+=12){ cx.beginPath(); cx.ellipse(0,cyw,r,r*.86,0,0,7); cx.stroke(); }
+    cx.fillStyle='rgba(233,223,196,.18)'; cx.beginPath(); cx.ellipse(0,cyw,R,R*.86,0,0,7); cx.fill();
+    cx.restore();
+  }
 }
 
 /* ================= EFECTOS ================= */
@@ -2182,6 +2274,18 @@ function drawFx(cam){
     cx.restore();
   });
   cx.globalAlpha=1;
+  // telarañas en vuelo: bola de hilos que gira
+  telas.forEach(w=>{
+    const px=w.x-cam; if(px<-40||px>CVW+40) return;
+    cx.save(); cx.translate(px,w.y); cx.rotate(w.rot);
+    cx.globalAlpha=Math.min(1,w.life*2);
+    cx.strokeStyle=BONE; cx.lineWidth=2.2; cx.lineCap='round';
+    for(let i=0;i<6;i++){ const a=i*Math.PI/3; line(Math.cos(a)*11,Math.sin(a)*11,Math.cos(a)*-11,Math.sin(a)*-11); }
+    cx.lineWidth=1.6;
+    for(let r=5;r<=11;r+=3){ cx.beginPath(); cx.arc(0,0,r,0,7); cx.stroke(); }
+    cx.fillStyle='rgba(233,223,196,.55)'; cx.beginPath(); cx.arc(0,0,4,0,7); cx.fill();
+    cx.restore();
+  });
   darts.forEach(d=>{
     const ang=Math.atan2(d.vy||0, d.vx);           // el dardo apunta a donde vuela
     if(okO('dart')){ const im=OPT.dart, H=6, W=im.width/im.height*H;
@@ -2355,9 +2459,9 @@ const CONTROLES_TACTIL=[
 ];
 const CONTROLES=TOUCH?CONTROLES_TACTIL:CONTROLES_TECLADO;
 const CONSEJOS=[
-  'Las ARAÑAS van pegadas al suelo: agáchate, o dispárales hacia abajo si las tienes encima.',
+  'Las ARAÑAS escupen telarañas: si te pegan, muévete para zafarte, o revienta la tela de un dardo.',
   'Dispara HACIA ARRIBA al tecolote en su percha y a Vucub Caquix cuando vuela.',
-  'El ALACRÁN lleva pedernal de frente. Sáltalo y dispárale mientras se gira.',
+  'El ALACRÁN lleva pedernal de frente y su aguijón hace DOBLE daño. Sáltalo y dispárale por la espalda.',
   'El TECOLOTE no pelea: grita y llama guardianes. Cállalo primero.',
   'Los BRASEROS DE COPAL curan y son el sitio donde vuelves si caes.',
   'A Vucub Caquix se le embosca cuando BAJA a comer al suelo: ahí parpadea «¡ahora!».',
@@ -2427,6 +2531,7 @@ function drawFinal(){
 /* ================= TRANSICIONES ================= */
 function empezarPartida(){
   VIDA_MAX=VIDA_BASE; poderes.jade=false; sala.resuelto=false; sala.intentos=0;
+  t.web=0; telas.length=0; avisoTela=false;
   evento('partida_iniciada', {tactil: TOUCH});
   t.x=400; t.y=GROUND; t.vx=0; t.vy=0; t.face=1; t.onGround=true;
   t.hp=VIDA_MAX; t.inv=1; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
