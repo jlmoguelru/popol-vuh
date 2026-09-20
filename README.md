@@ -14,18 +14,20 @@ contada con arte de códice.
 | `K` o `X` (mantener y soltar) | cerbatana — cuanto más cargas, más lejos y más fuerte |
 | `W` / `↑` · `S` / `↓` (mantener) | apuntar la cerbatana hacia arriba · hacia abajo |
 | `C` o `L` (mantener) | agacharse: disparo a ras de suelo |
-| `E` / `Enter` | atravesar la niebla de copal |
+| `E` / `Enter` | entrar por el sendero al claro del nance (y a las casas) |
 | `Esc` · `M` · `F` | pausa · silenciar música · pantalla completa |
 
 En móvil: gira el teléfono. Joystick a la izquierda para andar; joystick arriba o abajo + **Tiro** para disparar en esa dirección.
 
 ## El recorrido
 
-Portada → apertura del códice (8 láminas) → la selva del Bioma 1 → niebla de copal
-→ Vucub Caquix → cinemática «El brazo de Junajpú» → cierre.
+Portada → apertura del códice (8 láminas) → la selva del Bioma 1 → el sendero del
+nance → el claro: Vucub Caquix → **al vencerlo** arranca la cinemática «El brazo de
+Junajpú» → cierre.
 
 Los braseros de copal curan y son el punto donde vuelves si caes. Al falso sol se le
-embosca cuando **baja a comer al suelo**: ese primer dardo abre la pelea.
+embosca cuando **baja a comer al suelo**: ese primer dardo abre la pelea. Su picado
+quita dos corazones.
 
 ## Cómo está hecho
 

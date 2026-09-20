@@ -24,7 +24,7 @@ K  o  X (manten y suelta) .. cerbatana - cuanto mas cargas, mas lejos y mas fuer
 W / arriba  (manten) ....... apuntar la cerbatana hacia ARRIBA
 S / abajo   (manten) ....... apuntar la cerbatana hacia ABAJO
 C  o  L (manten) ........... agacharse: disparo a ras de suelo, contra las aranas
-E / ENTER .................. atravesar la niebla de copal (entrada al claro del jefe)
+E / ENTER .................. entrar por el sendero al claro del nance (y a las casas)
 ESC ........ pausa    M .... silenciar musica    F .... pantalla completa
 
 En movil: gira el telefono. A la izquierda hay un joystick: de lado para andar
@@ -35,12 +35,14 @@ completa es lo mas comodo, porque quita la barra del navegador.
 
 EL RECORRIDO
 ------------
-Portada -> apertura del codice (8 laminas) -> la selva (Bioma 1) ->
-niebla de copal -> Vucub Caquix -> cinematica "El brazo de Junajpu" -> cierre.
+Portada -> apertura del codice (8 laminas) -> la selva (Bioma 1) -> el sendero
+del nance -> el claro: Vucub Caquix -> al vencerlo, la cinematica "El brazo de
+Junajpu" -> cierre.
 
 Los BRASEROS DE COPAL curan y son el punto donde vuelves si caes.
 A Vucub Caquix se le embosca cuando BAJA a comer al suelo: ese primer dardo
-abre la pelea. Despues, aprovecha cuando pica y se estrella.
+abre la pelea. Despues, aprovecha cuando pica y se estrella. Su picado te quita
+DOS corazones, asi que esquiva y dispara en las ventanas.
 
 PUBLICARLO EN INTERNET
 ----------------------

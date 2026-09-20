@@ -235,7 +235,7 @@ const VIDA_BASE=4;
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-17 19:45';
+const VERSION='2026-09-20 12:30';
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -270,6 +270,12 @@ anchorSet('hun_',360,{
    persona. */
 anchorSet('hun_up',255,{1:[0.4957,0.9755], 2:[0.5044,0.9863], 3:[0.5089,0.9901], 4:[0.5135,0.9852], 5:[0.5,0.9846], 6:[0.5,0.9894], 7:[0.5,0.9843], 8:[0.5182,0.9844], 9:[0.5138,0.9893], 10:[0.4912,0.9838], 11:[0.487,0.9826], 12:[0.4955,0.9811], 13:[0.5294,0.981], 14:[0.5048,0.9809], 15:[0.5096,0.9809], 16:[0.5192,0.9809], 17:[0.5,0.9806], 18:[0.5,0.9805]});
 anchorSet('hun_down',255,{1:[0.4867,0.9796], 2:[0.456,0.9837], 3:[0.4597,0.9791], 4:[0.4919,0.9791], 5:[0.475,0.9788], 6:[0.5045,0.9784], 7:[0.513,0.9827], 8:[0.5086,0.9825], 9:[0.438,0.9786], 10:[0.4519,0.983], 11:[0.5345,0.9784], 12:[0.5431,0.9826], 13:[0.5128,0.9827], 14:[0.5169,0.9827], 15:[0.5043,0.9827], 16:[0.5043,0.9828], 17:[0.5046,0.9828], 18:[0.5,0.9828]});
+/* Envuelto en telaraña: de la hoja «Wrapped on spider web» sólo entran los dos
+   cuadros de perfil, que es como se ve a Junajpú en el juego: 1 = quieto dentro del
+   capullo, 2 = echado hacia atrás forcejeando. La escala no se puede medir por la
+   pierna (la tapa la seda), así que se iguala por la CARA A LOS PIES: 309 px a
+   ref 360 en el perfil normal y 391 px aquí → ref 456. */
+anchorSet('hun_red',456,{1:[0.5656,0.9932], 2:[0.6286,0.9906]});
 anchorSet('esq_',365,{
   walk1:[0.4257,0.9918], walk2:[0.5006,0.9918], walk3:[0.478,0.9918], walk4:[0.4801,0.9945],
   walk5:[0.5164,0.989], walk6:[0.5038,0.9918], wind:[0.5465,0.9945], atk:[0.264,0.9945],
@@ -313,6 +319,7 @@ const RUTAS={
   codice:'assets/codice/', codExt:'.jpg',
   codiceFiles:['panel1','panel2','panel3','panel4','panel5','panel6','panel7','panel8'],
   interior:'assets/escenas/', interiorFile:'casa_interior', interiorExt:'.jpg',
+  arenaFile:'arena', arenaExt:'.jpg',
   musica:{ intro:'assets/musica/intro.mp3', juego:'assets/musica/juego.mp3' }
 };
 /* ---- RUTAS:FIN ---- */
@@ -356,6 +363,7 @@ const OPT={}, OPT_SRC={ sh1:'hun_shoot1', sh2:'hun_shoot2', sh3:'hun_shoot3',
   wn5:'hun_walkn5', wn6:'hun_walkn6', wn7:'hun_walkn7', wn8:'hun_walkn8',
   dk1:'hun_duck1', dk2:'hun_duck2', dk3:'hun_duck3', dk4:'hun_duck4', dk5:'hun_duck5',
   dk6:'hun_duck6', dk7:'hun_duck7', dk8:'hun_duck8', dk9:'hun_duck9',
+  red1:'hun_red1', red2:'hun_red2',
   dart:'dardo' };
 for(let i=1;i<=18;i++){ OPT_SRC['up'+i]='hun_up'+i; OPT_SRC['dn'+i]='hun_down'+i; }
 Object.entries(ART_SRC).forEach(([k,f])=>{ ART[k]=loadImg(f,()=>{artFail=true;}); });
@@ -420,6 +428,7 @@ const okP=k=>ok(PR[k]);
 /* --- la casa de los escribas: interior y los dos monos, con sus cuatro caras
        (1 alegre · 2 serio · 3 enojado · 4 riendo) --- */
 const SALA_FONDO=loadImg(RUTAS.interiorFile,null,RUTAS.interior,RUTAS.interiorExt);
+const ARENA_FONDO=loadImg(RUTAS.arenaFile,null,RUTAS.escenas,RUTAS.arenaExt);
 const MONO={b:[],c:[]};
 for(let i=1;i<=4;i++){ MONO.b[i]=loadImg('mono_b'+i,null); MONO.c[i]=loadImg('mono_c'+i,null); }
 
@@ -688,7 +697,7 @@ const t={ x:400, y:GROUND, vx:0, vy:0, face:1, onGround:true,
   jumpsLeft:1, jumpHeld:false, run:0, animT:0, duck:false,
   hp:VIDA_MAX, hurtT:0, inv:0, charging:false, charge:0, dartCd:0,
   coyote:0, jbuf:0, squash:0, stretch:0, muerto:false, muerteT:0,
-  aim:'frente', shotAim:'frente', web:0 };
+  aim:'frente', shotAim:'frente', web:0, webF:0, webLucha:false };
 const darts=[], parts=[], feathers=[], telas=[];
 let avisoTela=false;                  // el aviso de «forcejea» sólo la primera vez
 let foes=[], boss=null;
@@ -744,7 +753,7 @@ function lanzaTela(e){
 }
 function enredar(){
   if(t.web>0||t.muerto) return;
-  t.web=1.5; burst(t.x,t.y-50,BONE,10); SFX.tela(); sacude(5,.2);
+  t.web=1.5; t.webF=0; t.webLucha=false; burst(t.x,t.y-50,BONE,10); SFX.tela(); sacude(5,.2);
   if(!avisoTela){ avisoTela=true; say('¡telaraña!  muévete para zafarte',2.4); }
 }
 function spawnFoes(){
@@ -759,17 +768,24 @@ function spawnFoes(){
 }
 
 /* ================= VUCUB CAQUIX ================= */
-const BOSSX=7060, CANOPY_Y=215, BOSS_H=170;
+/* ================= LA ARENA DEL NANCE =================
+   La pelea ya no ocurre en la selva que se desplaza, sino en una estampa cerrada
+   de cámara fija (la lámina «Fighting arena bioma 1»), a la que se entra por el
+   sendero de la escena 1.4. Por eso estas coordenadas son de PANTALLA, no del
+   mundo: dentro de la arena la cámara no se mueve. */
+let enArena=false;
+const BOSSX=640, CANOPY_Y=150, BOSS_H=170;
 const HOVER_Y=GROUND-230, DIVE_V=520, DIVE_FLOOR=GROUND-50;
-const ARENA_L=6180, ARENA_R=LEVEL-110;
-/* La pelea tiene tope de reloj. Si alguien falla mucho, el encuentro se eternizaba
-   y la cinemática del brazo —que es el momento del mito— no llegaba nunca. Con esto
-   el relato avanza pase lo que pase: el brazo como muy tarde al minuto, y el falso
-   sol cae poco después. Quien apunta bien llega mucho antes por daño. */
-const T_BRAZO=55, T_CAIDA=105;
+const ARENA_L=150, ARENA_R=1130;
+/* ORDEN DEL PASAJE: se llega al nance por el sendero, se le gana en la arena y
+   SÓLO entonces arranca la cinemática del brazo. No hay reloj que la dispare: el
+   relato avanza cuando el jugador derriba al falso sol, nunca porque se acabe un
+   tiempo. A cambio pega fuerte —el picado vale dos corazones— para que el asalto
+   siga siendo corto y tenso. */
+const DANO_PICADO=2, DANO_PLUMA=1;
 function spawnBoss(){
   boss={x:BOSSX,y:CANOPY_Y,vx:0,vy:0,face:-1,hp:300,maxhp:300,
-        state:'canopy',t:0,st:0,wt:1.6,active:false,hitCd:0,next:'dive',armCine:false,
+        state:'canopy',t:0,st:0,wt:1.6,active:false,hitCd:0,next:'dive',
         dead:false,deadT:0,tx:0,ty:0,gustN:0,fightT:0};
   feathers.length=0;
 }
@@ -783,11 +799,7 @@ function bossBox(){
 function updBoss(dt){
   if(!boss) return;
   boss.t+=dt; boss.st+=dt; boss.hitCd=Math.max(0,boss.hitCd-dt);
-  if(boss.active && !boss.dead){
-    boss.fightT+=dt;
-    if(!boss.armCine && boss.fightT>=T_BRAZO){ boss.armCine=true; cineStart('brazo'); return; }
-    if(boss.armCine && boss.fightT>=T_CAIDA){ bossCae(); return; }
-  }
+  if(boss.active && !boss.dead) boss.fightT+=dt;
   if(boss.dead){ boss.deadT+=dt;
     if(boss.y<GROUND) boss.y=Math.min(GROUND,boss.y+300*dt);
     return; }
@@ -803,7 +815,7 @@ function updBoss(dt){
       if(GROUND-boss.y<10){ boss.y=GROUND; bossGo('eat',3.6);
         /* el aviso sólo dentro del claro: el ciclo del jefe corre desde el
            principio del nivel y si no, el cartel saltaba en plena selva */
-        if(!boss.active && t.x>GATE_X) say('come en el suelo: ¡dispárale AHORA con la cerbatana!',3); }
+        if(!boss.active) say('come en el suelo: ¡dispárale AHORA con la cerbatana!',3); }
       break;
     case 'eat':                          // en el suelo: LA ventana de emboscada
       boss.face=Math.sign(d)||-1; boss.wt-=dt;
@@ -839,7 +851,8 @@ function updBoss(dt){
       break;
     case 'dive':
       boss.x+=boss.vx*dt; boss.y+=boss.vy*dt; boss.face=Math.sign(boss.vx)||boss.face;
-      if(t.inv<=0 && Math.abs(boss.x-t.x)<54 && Math.abs(boss.y-(t.y-46))<54) hurt(boss.x);
+      if(t.inv<=0 && Math.abs(boss.x-t.x)<54 && Math.abs(boss.y-(t.y-46))<54){
+        hurt(boss.x,DANO_PICADO); }
       if(boss.y>=DIVE_FLOOR){                    // estrellado: se gana la ventana
         boss.y=GROUND; bossGo('stun',1.5); burst(boss.x,GROUND,PAPER2,10);
         SFX.choque(); sacude(16,.45);
@@ -866,7 +879,8 @@ function updBoss(dt){
   boss.x=Math.max(ARENA_L,Math.min(ARENA_R,boss.x));
   boss.y=Math.max(90,Math.min(GROUND,boss.y));
   feathers.forEach(f=>{ f.x+=f.vx*dt; f.y+=f.vy*dt; f.life-=dt;
-    if(t.inv<=0 && f.life>0 && Math.abs(f.x-t.x)<30 && Math.abs(f.y-(t.y-50))<40){ hurt(f.x); f.life=0; } });
+    if(t.inv<=0 && f.life>0 && Math.abs(f.x-t.x)<30 && Math.abs(f.y-(t.y-50))<40){
+      f.life=0; hurt(f.x,DANO_PLUMA); } });
   for(let i=feathers.length-1;i>=0;i--) if(feathers[i].life<=0) feathers.splice(i,1);
 }
 
@@ -891,9 +905,9 @@ function bossDartHit(dd){
   boss.hitCd=.15; burst(dd.x,dd.y,RED,5); SFX.jefeHit();
   if(vuln){ sacude(7,.2); congela(.05); }
   if(boss.hp<=0){ bossCae(); return; }
-  /* A media vida se dispara la cinemática del brazo: es el punto del Popol Vuh en
-     que Junajpú se lanza a sujetarlo y el falso sol se lo lleva de un tirón. */
-  if(!boss.armCine && boss.hp<=boss.maxhp*0.5){ boss.armCine=true; cineStart('brazo'); }
+  /* a media vida chilla y aprieta: sin reloj, el aviso es lo que marca el tramo */
+  if(!boss.furia && boss.hp<=boss.maxhp*0.5){ boss.furia=true;
+    say('El falso sol chilla de rabia — le queda media luz',2.6); SFX.jefe(); }
 }
 function bossCae(){
   if(!boss||boss.dead) return;
@@ -905,34 +919,73 @@ function bossCae(){
   say('☀ EL FALSO SOL HA CAÍDO',4);
 }
 
-/* ============ NIEBLA DE COPAL (puerta del claro del jefe) ============
-   Separa la selva del territorio de Vucub Caquix: los bichos no la cruzan,
-   Junajpú sí, y al pasarla se anuncia el sitio. */
-const GATE_X=ARENA_L, GATE_STOP=GATE_X-26;
+/* ============ EL CAMINO DEL NANCE (entrada a la arena) ============
+   La selva termina en la boca del sendero: el único paso adelante es meterse por
+   él, y lleva a la arena cerrada donde espera el falso sol. Los bichos comunes no
+   pasan de aquí. Antes esto era una cortina de humo de copal, un apaño mientras no
+   había arte del camino. */
+/* Boca del sendero medida sobre la escena 1.4 (x≈540 de la lámina). La selva se
+   acaba aquí: el único paso adelante es meterse por el camino. */
+const GATE_X=6330, GATE_STOP=GATE_X+40;
 let gate={open:false, near:false, flash:0, t:0};
 function updGate(dt){
   gate.t+=dt;
   gate.flash=Math.max(0,gate.flash-dt);
-  gate.near = !gate.open && t.x>GATE_STOP-120 && t.x<=GATE_STOP+4;
-  if(!gate.open && t.x>GATE_STOP){          // la niebla es un muro hasta que se abre
-    t.x=GATE_STOP; if(t.vx>0) t.vx=0;
-  }
-  if(gate.near && ENTER()) abrirNiebla();
+  if(enArena) { gate.near=false; return; }
+  gate.near = t.x>GATE_STOP-130 && t.x<=GATE_STOP+4 && t.onGround;
+  if(t.x>GATE_STOP){ t.x=GATE_STOP; if(t.vx>0) t.vx=0; }   // la selva no sigue
+  if(gate.near && ENTER()) entrarArena();
 }
-/* En el teléfono no hay tecla E: sin esto era IMPOSIBLE llegar al jefe desde el
-   móvil, porque los botones táctiles son sólo andar, saltar, tiro y agacharse.
-   Ahora basta con tocar la pantalla cuando aparece el aviso del umbral. */
-function abrirNiebla(){
-  if(gate.open || !gate.near) return false;
-  evento('niebla_cruzada');
-  gate.open=true; gate.flash=2.6; t.inv=Math.max(t.inv,1.2); t.hp=VIDA_MAX;
-  checkpoint=GATE_X+120;
-  /* al entrar en el claro, el falso sol baja enseguida: esperar a que terminara su
-     ronda por la copa dejaba varios segundos muertos justo al llegar */
-  if(boss && !boss.active && boss.state==='canopy') boss.wt=Math.min(boss.wt,.8);
-  say('EL CLARO DEL NANCE · dominio de Vucub Caquix',3.4);
-  burst(GATE_X,GROUND-60,GOLDS,14); SFX.umbral();
+/* En el teléfono no hay tecla E, así que también se entra tocando la pantalla. */
+function entrarArena(){
+  if(enArena || !gate.near) return false;
+  evento('arena_entrada');
+  enArena=true; gate.flash=2.2;
+  volverA=t.x;                                  // por dónde se volvió a la selva
+  t.x=ARENA_L+120; t.y=GROUND; t.vx=0; t.vy=0; t.onGround=true; t.face=1;
+  t.inv=1.2; t.hp=VIDA_MAX; t.web=0; telas.length=0; darts.length=0;
+  checkpoint=GATE_X-120;                        // si todo acaba, se vuelve a la selva
+  spawnBoss(); boss.wt=1.2;
+  say('EL CLARO DEL NANCE · derríbalo: su picado vale dos corazones',3.8);
+  SFX.umbral();
   return true;
+}
+function salirArena(){
+  enArena=false;
+  t.x=volverA||GATE_STOP-40; t.y=GROUND; t.vx=0; t.vy=0; t.onGround=true; t.inv=1.2;
+}
+let volverA=0;
+function drawCamino(cam){
+  if(enArena) return;
+  const px=GATE_X-cam;
+  if(px<-220||px>CVW+220) return;
+  /* claro de luz en la boca del sendero: invita a entrar sin poner un cartel */
+  cx.save();
+  const g=cx.createRadialGradient(px,GROUND-110,10,px,GROUND-110,200);
+  const a=(gate.near?.28:.14)+.05*Math.sin(simT*2.2);
+  g.addColorStop(0,'rgba(245,215,140,'+a+')'); g.addColorStop(1,'rgba(245,215,140,0)');
+  cx.fillStyle=g; cx.fillRect(px-200,GROUND-310,400,320);
+  if(gate.flash>0){ cx.globalAlpha=Math.min(.45,gate.flash*.3);
+    cx.fillStyle=GOLDS; cx.fillRect(px-200,0,400,GROUND+40); }
+  cx.restore();
+  if(gate.near){
+    const by=GROUND-200;
+    cx.save(); cx.textAlign='center';
+    cx.globalAlpha=.55+.45*Math.sin(gate.t*4.5); cx.font='700 17px Georgia';
+    inkText(TOUCH?'TOCA LA PANTALLA PARA SEGUIR EL CAMINO':'E  ·  SEGUIR EL CAMINO', px, by, RED);
+    cx.globalAlpha=1; cx.font='13px Georgia';
+    inkText('el falso sol come al final del sendero', px, by+22, INK, null, 3);
+    cx.restore();
+  }
+}
+/* La arena: lámina fija a pantalla completa. */
+function drawArena(){
+  if(ok(ARENA_FONDO)){
+    const a=ARENA_FONDO.naturalWidth/ARENA_FONDO.naturalHeight, ca=CVW/CVH;
+    let w,h; if(a>ca){ h=CVH; w=h*a; } else { w=CVW; h=w/a; }
+    cx.drawImage(ARENA_FONDO,(CVW-w)/2,(CVH-h)/2,w,h);
+  } else { cx.fillStyle=PAPER; cx.fillRect(0,0,CVW,CVH);
+    cx.fillStyle=PAPER2; cx.fillRect(0,GROUND,CVW,CVH-GROUND); }
 }
 
 /* ¿Junajpú está a la altura del bicho? Los ataques cuerpo a cuerpo son horizontales.
@@ -1042,7 +1095,13 @@ function updFoes(dt){
   foes.forEach(e=>{ if(e.hp>0 && e.x>GATE_X-46){
     e.x=GATE_X-46; if(e.state==='chase'||e.state==='guard') e.face=-1; } });
 
-  // telarañas en vuelo
+  foes=foes.filter(e=>e.hp>0 || e.deadT<1.4);
+}
+
+/* Proyectiles: telarañas en vuelo y dardos. Va aparte de updFoes porque dentro del
+   claro del nance NO se actualizan los bichos —y sin esto los dardos atravesaban al
+   falso sol sin tocarlo, que era justo la pelea que hay que poder ganar. */
+function updProyectiles(dt){
   telas.forEach(w=>{
     w.x+=w.vx*dt; w.y+=w.vy*dt; w.vy+=280*dt; w.life-=dt; w.rot+=7*dt;
     if(w.life>0 && !t.muerto && t.web<=0 && t.inv<=0 &&
@@ -1051,7 +1110,6 @@ function updFoes(dt){
   });
   for(let i=telas.length-1;i>=0;i--) if(telas[i].life<=0) telas.splice(i,1);
 
-  // dardos contra el jefe y contra los enemigos
   darts.forEach(dd=>{
     if(dd.life<=0) return;
     telas.forEach(w=>{                       // un dardo revienta la telaraña en el aire
@@ -1060,7 +1118,7 @@ function updFoes(dt){
     });
     if(dd.life<=0) return;
     bossDartHit(dd);
-    if(dd.life<=0) return;
+    if(dd.life<=0 || enArena) return;        // en el claro sólo está él
     foes.forEach(e=>{
       if(e.hp<=0||dd.life<=0) return;
       const B=HITBOX(e);
@@ -1076,7 +1134,6 @@ function updFoes(dt){
       }
     });
   });
-  foes=foes.filter(e=>e.hp>0 || e.deadT<1.4);
 }
 
 /* caja de golpe por especie */
@@ -1207,7 +1264,8 @@ function revive(){
   t.hp=VIDA_MAX; t.inv=1.6; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
   t.muerto=false; t.muerteT=0; t.jumpsLeft=P.jmax; slowmo=1; paused=false; t.web=0;
   spawnFoes();
-  if(checkpoint>GATE_X){ gate.open=true; say('el falso sol sube al nance… espera a que baje',3); }
+  if(enArena){ t.x=ARENA_L+120; spawnBoss(); boss.wt=1.2;
+    say('el falso sol vuelve al nance… espera a que baje',3); }
   SCREEN='juego';
 }
 
@@ -1241,10 +1299,16 @@ function control(dt){
      jugador totalmente inútil se siente injusto. Y moverse acorta el forcejeo:
      de 1,5 s quieto a ~0,6 s si reaccionas. */
   if(t.web>0){
-    t.web-=dt*(1+((L()||R()||JUMP()||vk.ax)?1.8:0));
-    if(t.web<=0){ t.web=0; burst(t.x,t.y-50,BONE,6); }
+    /* forcejeo: machacar cualquier mando acorta el encierro y acelera el vaivén del
+       capullo, que es lo que le dice al jugador que sirve de algo apretar. */
+    t.webLucha = !!(L()||R()||JUMP()||vk.ax||SHOOT());
+    t.web-=dt*(1+(t.webLucha?1.8:0));
+    t.webF+=dt*(t.webLucha?7.5:2.8);
+    if(t.web<=0){ t.web=0; t.webLucha=false;
+      burst(t.x,t.y-50,BONE,10); burst(t.x,t.y-90,BONE,6); SFX.rebote(); }
   }
   const enredado=t.web>0;
+  if(enredado){ t.charging=false; t.charge=0; slowmo=1; }   // con los brazos liados no sopla
   t.duck = DUCK() && t.onGround && !enredado;
   /* hacia dónde apunta la cerbatana; agachado siempre dispara al frente, a ras de suelo */
   t.aim = t.duck? 'frente' : AIM_UP()? 'arriba' : AIM_DN()? 'abajo' : 'frente';
@@ -1278,7 +1342,7 @@ function control(dt){
 
   // — cerbatana: mantener para cargar, soltar para soplar —
   t.dartCd-=dt;
-  if(SHOOT() && t.dartCd<=0){
+  if(SHOOT() && t.dartCd<=0 && !enredado){
     t.charging=true; t.charge=Math.min(1,t.charge+dt/0.8); slowmo=.45;
   } else if(t.charging){
     t.charging=false; slowmo=1; t.dartCd=.5; shootDart(); t.charge=0;
@@ -1291,7 +1355,8 @@ function phys(dt){
   t.vy+=g*dt;
   const y0=t.y;
   t.x+=t.vx*dt; t.y+=t.vy*dt;
-  t.x=Math.max(30,Math.min(LEVEL-30,t.x));
+  t.x = enArena? Math.max(ARENA_L,Math.min(ARENA_R,t.x))
+               : Math.max(30,Math.min(LEVEL-30,t.x));
   const wasAir=!t.onGround, fallV=t.vy;
   if(t.y>=GROUND){ t.y=GROUND; t.vy=0; land(wasAir,fallV); }
   else{
@@ -1459,16 +1524,9 @@ function cineEnd(){
   else if(m==='final'){ irFinal(); }
   else if(m==='derrota'){ revive(); }
   else if(m==='brazo'){
-    // la pelea continúa: sólo se recoloca a Junajpú y se le da un respiro
-    SCREEN='juego';
-    t.hurtT=0; t.vx=0; t.vy=0; t.inv=1.8; t.charging=false; t.charge=0; t.hp=VIDA_MAX;
-    if(boss && !boss.dead){
-      bossGo('rise'); boss.hitCd=.4;
-      /* último asalto, y CORTO: sale malherido, con lo justo para dos ventanas de
-         daño. Sin esto la pelea seguía tan larga como antes de la cinemática. */
-      boss.hp=Math.min(boss.hp, 76);
-    }
-    say('¡te arrancó el brazo! — acaba con él',3.6);
+    /* la cinemática del brazo va DESPUÉS de vencerlo: de ahí se sigue al cierre.
+       Si se ve desde el menú (repaso), se vuelve al menú sin tocar la partida. */
+    if(boss && boss.dead) cineStart('final'); else irPortada();
   }
   else SCREEN='juego';
 }
@@ -1649,6 +1707,7 @@ function drawCine(){
 /* La cámara se redondea a píxel entero: con posición fraccionaria las láminas se
    remuestreaban distinto cada fotograma y el fondo entero hervía al caminar. */
 function camX(){
+  if(enArena) return 0;                     // la arena es una estampa fija
   const raw=Math.max(0,Math.min(LEVEL-CVW,t.x-CVW*0.45));
   /* se ajusta a píxel de PANTALLA (no lógico): así la copia 1:1 de las láminas cae
      en una posición entera del búfer, sin remuestreo ni hervor del fondo al andar */
@@ -1772,6 +1831,7 @@ function drawPlatforms(cam){
   });
 }
 function drawWorld(cam){
+  if(enArena){ drawArena(); return; }
   cx.fillStyle=PAPER; cx.fillRect(0,0,CVW,CVH);
   if(okS(0)){ drawScenes(cam); }
   else {                                   // respaldo si las láminas no cargan
@@ -1962,45 +2022,6 @@ function drawSala(){
   cx.fillText(TOUCH?'←  salir':'←  salir (ESC)', s0.x+s0.w/2, s0.y+25); cx.restore();
 }
 
-/* ---------- niebla de copal ---------- */
-function drawGate(cam){
-  const px=GATE_X-cam, W=104;
-  if(px<-W-40||px>CVW+W+40) return;
-  cx.save();
-  const g=cx.createLinearGradient(px-W/2,0,px+W/2,0);
-  g.addColorStop(0,   'rgba(232,220,186,0)');
-  g.addColorStop(.5,  'rgba(238,228,198,'+(gate.open?.42:.72)+')');
-  g.addColorStop(1,   'rgba(232,220,186,0)');
-  cx.fillStyle=g; cx.fillRect(px-W/2,0,W,GROUND+40);
-  for(let k=0;k<16;k++){
-    const t2=((simT*.09)+hsh(k,41))%1;
-    const x=px+(hsh(k,42)-.5)*W*.78+Math.sin(simT*.7+k)*9;
-    const y=GROUND+20-t2*(GROUND+60);
-    voluta(x,y, 9+t2*26, simT*.25+k, INK, 2.2, (1-t2)*.20);
-  }
-  cx.strokeStyle='rgba(122,90,30,.55)'; cx.lineWidth=2;
-  line(px-W/2,0,px-W/2,GROUND); line(px+W/2,0,px+W/2,GROUND);
-  cx.globalAlpha=.75; cx.strokeStyle=INK; cx.lineWidth=2;
-  cx.strokeRect(px-16,54,32,26); cx.beginPath(); cx.arc(px,67,6,0,7); cx.stroke();
-  cx.globalAlpha=1;
-  if(gate.flash>0){
-    cx.globalAlpha=Math.min(.5,gate.flash*.28);
-    cx.fillStyle=GOLDS; cx.fillRect(px-W/2,0,W,GROUND+40); cx.globalAlpha=1;
-  }
-  cx.restore();
-  if(gate.near){
-    const bx=GATE_STOP-cam-46, by=GROUND-190;
-    cx.save();
-    cx.globalAlpha=.55+.45*Math.sin(gate.t*4.5);
-    cx.textAlign='center'; cx.font='700 17px Georgia';
-    inkText(TOUCH?'TOCA LA PANTALLA PARA ENTRAR':'E  ·  ENTRAR EN EL CLARO', bx, by, RED);
-    cx.globalAlpha=1;
-    cx.font='13px Georgia';
-    inkText('el falso sol te espera dentro', bx, by+22, INK, null, 3);
-    cx.restore();
-  }
-}
-
 /* ================= ENEMIGOS (dibujo) ================= */
 const TOPY={esq:128,ara:EH.ara*.85,ala:EH.ala*.9,tec:EH.tec+8};
 function drawFoes(cam){
@@ -2137,7 +2158,7 @@ function snap(){ return { x:t.x, y:t.y, face:t.face, run:t.run,
   inAir:!t.onGround, charging:t.charging, charge:t.charge,
   dartCd:t.dartCd, hurtT:t.hurtT, vy:t.vy, duck:t.duck,
   squash:t.squash, stretch:t.stretch, vx:t.vx, animT:t.animT,
-  aim:t.aim, shotAim:t.shotAim }; }
+  aim:t.aim, shotAim:t.shotAim, web:t.web, webF:t.webF, webLucha:t.webLucha }; }
 
 /* Selección de cuadro + movimiento procedural sobre el gráfico: rebote y bamboleo
    de zancada, tirón hacia atrás al recibir daño, retroceso al soplar. */
@@ -2149,7 +2170,12 @@ function drawSprite(o){
   const vertical = (o.charging || o.dartCd>0) && (dirV==='arriba'||dirV==='abajo');
   const hojaV = dirV==='arriba'? 'up' : 'dn';
   let img, H=P.sprH, ax=null;
-  if(o.duck && okO('dk1')){
+  if(o.web>0 && okO('red1')){
+    /* ENVUELTO: cuadro propio de la hoja de telaraña. Va el primero de la cadena
+       porque anula todo lo demás — ni agacharse, ni soplar, ni correr. */
+    img = (okO('red2') && Math.sin(o.webF)>0)? OPT.red2 : OPT.red1;
+  }
+  else if(o.duck && okO('dk1')){
     /* AGACHADO: hoja propia de 9 cuadros (1-5 levanta y sopla · 6-9 apunta y sopla).
        Es más bajo que de pie, así que va con su propia altura y ancla. */
     H=P.duckH; ax=P.duckAx;
@@ -2199,12 +2225,16 @@ function drawSprite(o){
   else img = okO('idle2')? OPT.idle2 : ART.hidle;
 
   cx.save();
-  if(!o.inAir && Math.abs(o.vx)>40 && o.hurtT<=0){
+  if(o.web>0){                          // el capullo se balancea, no corre ni rebota
+    cx.rotate(Math.sin(o.webF)*.05);
+    cx.translate(Math.sin(o.webF*2.1)*(o.webLucha?2.2:.8),0);
+  }
+  else if(!o.inAir && Math.abs(o.vx)>40 && o.hurtT<=0){
     const ph=o.run*P.cyc*Math.PI;
     cx.translate(0,-Math.abs(Math.sin(ph))*P.sprBob);
     cx.rotate(Math.sin(ph*2)*P.sprTilt);
   }
-  if(o.hurtT>0 && !okO('hurt')) cx.rotate(-(o.hurtT/.35)*.45);
+  if(o.hurtT>0 && !okO('hurt') && !o.web) cx.rotate(-(o.hurtT/.35)*.45);
   if(o.dartCd>.35 && !o.charging && o.shotAim==='frente') cx.translate(-3,0);   // retroceso sólo al frente
   if(o.charging && o.charge>=1) cx.translate((Math.random()-.5)*1.6,0);
   if(ok(img)) drawAnchored(img,H,ax);
@@ -2247,7 +2277,24 @@ function drawChar(o,cam){
   const sq=1-o.squash*1.4+o.stretch*.9; cx.scale(2-sq,sq); // squash & stretch
   if(artOk()) drawSprite(o); else puppet(o);
   cx.restore();
-  if(t.web>0 && !t.muerto){                 // hilos pegados encima del personaje
+  if(t.web>0 && !t.muerto && okO('red1')){  // hilos de anclaje: del capullo al suelo
+    cx.save(); cx.translate(o.x-cam,o.y);
+    cx.globalAlpha=Math.min(1,t.web*1.6)*.5;
+    cx.strokeStyle=BONE; cx.lineCap='round';
+    /* seda floja: cada hilo cuelga con su panza y se estira cuando forcejea */
+    const tir=Math.sin(t.webF)*(t.webLucha?4:1.4);
+    for(let i=0;i<4;i++){
+      const lx=(i-1.5)*29, sx=(i-1.5)*9+tir*.6, sy=-84+Math.abs(i-1.5)*14,
+            panza=10-Math.abs(tir)*1.2;                 // al tirar se tensa
+      cx.lineWidth=i===1||i===2? 1.8 : 1.3;
+      cx.beginPath(); cx.moveTo(sx,sy);
+      cx.bezierCurveTo(sx+(lx-sx)*.2, sy*.45, (lx+sx)/2+panza*Math.sign(lx||1), -14, lx, -1);
+      cx.stroke();
+      cx.beginPath(); cx.arc(lx,-1,1.7,0,7); cx.fillStyle=BONE; cx.fill();
+    }
+    cx.restore();
+  }
+  else if(t.web>0 && !t.muerto){            // respaldo si la hoja no cargó
     cx.save(); cx.translate(o.x-cam,o.y);
     const j=Math.sin(simT*40)*1.6;          // tirones del forcejeo
     cx.translate(j,0);
@@ -2316,7 +2363,7 @@ function drawHUD(){
   cx.restore();
 
   // — avance por la selva —
-  const prog=Math.max(0,Math.min(1,(t.x-300)/(BOSSX-300)));
+  const prog=enArena? 1 : Math.max(0,Math.min(1,(t.x-300)/(GATE_X-300)));
   cx.save();
   cx.fillStyle='rgba(42,28,16,.30)'; cx.fillRect(232,36,300,4);
   cx.fillStyle=GOLDS; cx.fillRect(232,36,300*prog,4);
@@ -2537,7 +2584,7 @@ function empezarPartida(){
   t.hp=VIDA_MAX; t.inv=1; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
   t.muerto=false; t.muerteT=0; t.run=0; t.jumpsLeft=P.jmax; t.duck=false;
   checkpoint=400; HOGUERAS.forEach(h=>h.on=false);
-  gate={open:false,near:false,flash:0,t:0};
+  gate={open:false,near:false,flash:0,t:0}; enArena=false; volverA=0;
   pistaI=0; pistaT=0; slowmo=1; paused=false; notice={txt:'',t:0};
   shake.t=0; shake.mag=0; hitStop=0;
   spawnFoes();
@@ -2555,7 +2602,7 @@ function irPausa(){
 }
 function irMuerte(){
   evento('muerte', {contra_el_jefe: !!(boss&&boss.active),
-                    avance_pct: Math.round(Math.max(0,Math.min(1,(t.x-300)/(BOSSX-300)))*100)});
+                    avance_pct: Math.round(Math.max(0,Math.min(1,(t.x-300)/(GATE_X-300)))*100)});
   SCREEN='muerte';
   menuSet('','',[
     {label:'Volver al brasero de copal', go:()=>revive()},
@@ -2579,14 +2626,15 @@ function updJuego(raw){
   const dt=raw*slowmo;
   if(t.muerto){
     t.muerteT+=raw;
-    phys(dt); updFoes(dt); updBoss(dt);
+    phys(dt); if(enArena) updBoss(dt); else updFoes(dt); updProyectiles(dt);
     if(t.muerteT>1.5) irMuerte();
     return;
   }
-  control(dt); phys(dt); updFoes(dt); updBoss(dt); updGate(dt);
-  updHogueras(); updPistas(raw);
-  /* el falso sol ha caído: se deja ver la caída y arranca el cierre */
-  if(boss && boss.dead && boss.deadT>3.4) cineStart('final');
+  control(dt); phys(dt);
+  if(enArena) updBoss(dt); else { updFoes(dt); updGate(dt); updHogueras(); updPistas(raw); }
+  updProyectiles(dt);
+  /* vencido el falso sol se deja ver la caída y arranca la cinemática del brazo */
+  if(boss && boss.dead && boss.deadT>3.4) cineStart('brazo');
 }
 
 function drawJuego(){
@@ -2595,12 +2643,12 @@ function drawJuego(){
   cx.save();
   if(s) cx.translate((Math.random()-.5)*2*s,(Math.random()-.5)*2*s);
   drawWorld(cam);
-  drawFoes(cam);
-  drawBoss(cam);
+  if(!enArena) drawFoes(cam);
+  if(enArena) drawBoss(cam);
   drawChar(snap(),cam);
   drawFx(cam);      // dardos y volutas SOBRE los personajes
-  drawGate(cam);    // la niebla va delante: se entra atravesándola
-  drawCasaAviso(cam);
+  drawCamino(cam);  // el claro del sendero va delante de los personajes
+  if(!enArena) drawCasaAviso(cam);
   cx.restore();
   drawHUD();
 }
@@ -2623,7 +2671,7 @@ function onKey(code){
       break;
     case 'juego':
       if(code==='Escape') irPausa();
-      else if(code==='KeyE'||code==='Enter') entrarSala();
+      else if(code==='KeyE'||code==='Enter'){ if(!entrarSala()) entrarArena(); }
       break;
     case 'sala':
       if(code==='Escape'){ salirSala(); break; }
@@ -2650,7 +2698,7 @@ function onTap(fx,fy){
     case 'controles': SCREEN=volverDe; break;
     case 'juego':
       // tocar la pantalla entra en la casa o cruza la niebla, según dónde estés
-      if(!entrarSala()) abrirNiebla();
+      if(!entrarSala()) entrarArena();
       break;
     case 'sala': {
       const x=fx*CVW, y=fy*CVH, r=salaSalirRect;
