@@ -235,7 +235,7 @@ const VIDA_BASE=4;
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-20 12:30';
+const VERSION='2026-09-22 15:16';
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -243,10 +243,11 @@ const VERSION='2026-09-20 12:30';
    (fracción del ancho) · by = planta de los pies (fracción del alto).
    ref = altura de origen que equivale a la altura de dibujo pedida; con una
    escala única por familia el personaje conserva su tamaño y pisa el suelo
-   en todas las poses. */
+   en todas las poses. Un tercer valor opcional, my, es el centro vertical que se
+   usa al dibujar EN EL AIRE (si falta, la mitad del lienzo). */
 const ANCHOR={};
 function anchorSet(pref,ref,tbl){
-  Object.entries(tbl).forEach(([k,v])=>{ ANCHOR[pref+k]={ax:v[0],by:v[1],ref}; });
+  Object.entries(tbl).forEach(([k,v])=>{ ANCHOR[pref+k]={ax:v[0],by:v[1],my:v[2],ref}; });
 }
 anchorSet('hun_',360,{
   idle:[0.4494,1], idle2:[0.5459,0.9868], atk:[0.3715,1], hurt:[0.5897,0.9711],
@@ -280,28 +281,61 @@ anchorSet('esq_',365,{
   walk1:[0.4257,0.9918], walk2:[0.5006,0.9918], walk3:[0.478,0.9918], walk4:[0.4801,0.9945],
   walk5:[0.5164,0.989], walk6:[0.5038,0.9918], wind:[0.5465,0.9945], atk:[0.264,0.9945],
   slash:[0.348,0.9945] });
+/* Vucub Caquix: recortado de nuevo (22 sept. 2026) desde las hojas HD de fondo verde.
+   El recorte viejo quitaba TODO píxel verdoso y con él la franja verde de las alas,
+   los anteojos y orejeras de jade: se veía el escenario a través del pájaro.
+   ax y my son el CENTRO DE MASA de cada cuadro: con el centro del lienzo el cuerpo
+   bailaba 5-27 px entre cuadros del vuelo (la cola larga cambia el ancho) y al
+   girarse en el suelo saltaba ~60 px. by (los pies) es el de siempre. */
 anchorSet('vc_',181,{
-  idle1:[0.5073,0.9811], idle2:[0.4926,0.9811], idle3:[0.5,0.9811], idle4:[0.5,0.9811],
-  idle5:[0.5074,0.9748], idle6:[0.492,0.9811], hover1:[0.5,0.9779], hover2:[0.4939,0.9779],
-  hover3:[0.5,0.9669], hover4:[0.5077,0.9779], hover5:[0.4931,0.9834], hover6:[0.5,0.9834],
-  flyr1:[0.5,0.9701], flyr2:[0.5,0.9701], flyr3:[0.5,0.9627], flyr4:[0.5,0.9552],
-  flyr5:[0.5,0.9627], flyr6:[0.4945,0.9776], flyl1:[0.5,0.8854], flyl2:[0.5,0.8854],
-  flyl3:[0.5,0.9045], flyl4:[0.5,0.9172], flyl5:[0.5,0.9172], flyl6:[0.5,0.9809],
-  flyl7:[0.5,0.9363], flyl8:[0.5,0.9299], atkr1:[0.5,0.9217], atkr2:[0.5,0.9277],
-  atkr3:[0.5,0.9337], atkr4:[0.5,0.9277], atkr5:[0.5,0.9819], atkl1:[0.5,0.9226],
-  atkl2:[0.5,0.9345], atkl3:[0.5,0.9405], atkl4:[0.5,0.9345], atkl5:[0.5,0.9821],
-  diver1:[0.5,0.8155], diver2:[0.5,0.7857], diver3:[0.5,0.8036], diver4:[0.5,0.9821],
-  diver5:[0.5,0.8274], diver6:[0.5,0.8988], divel1:[0.5,0.8204], divel2:[0.5,0.7964],
-  divel3:[0.5,0.8144], divel4:[0.5,0.982], divel5:[0.5,0.8383], divel6:[0.5,0.8922],
-  hurt1:[0.5,0.9353], hurt2:[0.5,0.9209], hurt3:[0.5,0.9784], hurt4:[0.5,0.9568],
-  death1:[0.5,0.9474], death2:[0.5,0.9774], death3:[0.5,0.9699], death4:[0.4937,0.9474],
-  death5:[0.5,0.9624], death6:[0.5,0.9624] });
+  idle1:[0.6444,0.9811,0.567], idle2:[0.6479,0.9811,0.5681],
+  idle3:[0.6491,0.9811,0.5693], idle4:[0.6534,0.9811,0.5701],
+  idle5:[0.6434,0.9748,0.5651], idle6:[0.6398,0.9811,0.5671],
+  hover1:[0.4962,0.9779,0.5193], hover2:[0.4786,0.9779,0.5737],
+  hover3:[0.5261,0.9669,0.5345], hover4:[0.5208,0.9779,0.6163],
+  hover5:[0.5076,0.9834,0.5125], hover6:[0.4943,0.9834,0.4821],
+  flyr1:[0.5428,0.9701,0.5924], flyr2:[0.549,0.9701,0.6342],
+  flyr3:[0.5474,0.9627,0.6105], flyr4:[0.6035,0.9328,0.6081],
+  flyr5:[0.6168,0.9552,0.613], flyr6:[0.6045,0.9627,0.6498],
+  flyr7:[0.6017,0.9776,0.6433], flyl1:[0.3847,0.8854,0.5054],
+  flyl2:[0.4268,0.8854,0.4969], flyl3:[0.46,0.9045,0.5603],
+  flyl4:[0.428,0.9172,0.6067], flyl5:[0.4516,0.9172,0.6039],
+  flyl6:[0.4541,0.9809,0.6226], flyl7:[0.4569,0.9363,0.593],
+  flyl8:[0.4702,0.9299,0.6748], hurt1:[0.4967,0.9353,0.4854],
+  hurt2:[0.4897,0.9209,0.5313], hurt3:[0.6033,0.9784,0.6294],
+  hurt4:[0.6425,0.9568,0.5945], death1:[0.5278,0.9474,0.5038],
+  death2:[0.5064,0.9774,0.6682], death3:[0.4837,0.9699,0.7263],
+  death4:[0.5074,0.9474,0.7664], death5:[0.5059,0.9624,0.8059],
+  death6:[0.5048,0.9624,0.8169], atkr1:[0.5565,0.9217,0.5034],
+  atkr2:[0.5525,0.9277,0.6868], atkr3:[0.56,0.9337,0.7241],
+  atkr4:[0.5548,0.9277,0.6863], atkr5:[0.5453,0.9819,0.7716],
+  atkl1:[0.4239,0.9226,0.5034], atkl2:[0.4548,0.9345,0.6777],
+  atkl3:[0.4364,0.9405,0.7426], atkl4:[0.4459,0.9345,0.694],
+  atkl5:[0.4442,0.9821,0.7662], diver1:[0.5494,0.8155,0.4577],
+  diver2:[0.5558,0.7857,0.553], diver3:[0.5647,0.8036,0.6326],
+  diver4:[0.559,0.9821,0.6354], diver5:[0.5221,0.8274,0.6511],
+  diver6:[0.5841,0.8988,0.5066], divel1:[0.4437,0.8204,0.4573],
+  divel2:[0.4408,0.7964,0.561], divel3:[0.4313,0.8144,0.6401],
+  divel4:[0.4442,0.982,0.6361], divel5:[0.4764,0.8383,0.6592],
+  divel6:[0.4065,0.8922,0.4922] });
 
 /* Dibuja un cuadro anclado por su CONTENIDO, no por su lienzo. */
-function drawAnchored(img,h,ax,mid){
+function drawAnchored(img,h,ax,mid,src){
   const an=img.an, k=an? h/an.ref : h/img.naturalHeight;
   const W=img.naturalWidth*k, H=img.naturalHeight*k;
-  cx.drawImage(img, -(ax!=null?ax:(an?an.ax:.5))*W, -(mid?.5:(an?an.by:1))*H, W, H);
+  const ay = mid? (an&&an.my!=null? an.my : .5) : (an?an.by:1);
+  cx.drawImage(src||img, -(ax!=null?ax:(an?an.ax:.5))*W, -ay*H, W, H);
+}
+/* Silueta teñida de un cuadro, para destellos de golpe sin volver transparente al
+   personaje (antes el jefe parpadeaba a medio alfa y se veía el fondo a través). */
+const tintCv=document.createElement('canvas'), tintCx=tintCv.getContext('2d');
+function tinted(img,col){
+  const w=img.naturalWidth, h=img.naturalHeight;
+  if(tintCv.width!==w||tintCv.height!==h){ tintCv.width=w; tintCv.height=h; }
+  tintCx.globalCompositeOperation='source-over'; tintCx.clearRect(0,0,w,h);
+  tintCx.drawImage(img,0,0);
+  tintCx.globalCompositeOperation='source-atop'; tintCx.fillStyle=col; tintCx.fillRect(0,0,w,h);
+  return tintCv;
 }
 
 /* ================= CARGA DE ARTE (con barra de progreso) ================= */
@@ -408,11 +442,16 @@ const EH={ ara:105, ala:106, tec:95 };
 const GIRO_T=0.85;   // lo que tarda el alacrán en girarse = ventana para la espalda
 
 /* --- Vucub Caquix --- */
-const VC={}, VC_N={idle:6,hover:6,flyr:6,flyl:6,hurt:4,death:6};
-Object.entries(VC_N).forEach(([k,n])=>{ for(let i=1;i<=n;i++) VC[k+i]=loadImg('vc_'+k+i,null); });
+/* Cuadros de cada ciclo, en el orden de la hoja. El 6 de «volar a la izquierda»
+   trae DOS cabezas (el generador encimó dos pájaros): se salta. */
+const VC_SEQ={idle:[1,2,3,4,5,6], hover:[1,2,3,4,5,6], flyr:[1,2,3,4,5,6,7],
+              flyl:[1,2,3,4,5,7,8], hurt:[1,2,3,4], death:[1,2,3,4,5,6]};
+const VC={}, VC_N={};
+Object.entries(VC_SEQ).forEach(([k,sq])=>{ VC_N[k]=sq.length;
+  sq.forEach(i=>{ VC[k+i]=loadImg('vc_'+k+i,null); }); });
 VC.projr=loadImg('vc_projr',null);
 const okV=k=>ok(VC[k]);
-const vcF=(k,tt,fps)=>VC[k+(1+Math.floor(Math.max(0,tt)*fps)%VC_N[k])];
+const vcF=(k,tt,fps)=>VC[k+VC_SEQ[k][Math.floor(Math.max(0,tt)*fps)%VC_N[k]]];
 
 /* --- utilería --- */
 const PR={};
@@ -775,7 +814,7 @@ function spawnFoes(){
    mundo: dentro de la arena la cámara no se mueve. */
 let enArena=false;
 const BOSSX=640, CANOPY_Y=150, BOSS_H=170;
-const HOVER_Y=GROUND-230, DIVE_V=520, DIVE_FLOOR=GROUND-50;
+const HOVER_Y=GROUND-230, DIVE_FLOOR=GROUND-50;
 const ARENA_L=150, ARENA_R=1130;
 /* ORDEN DEL PASAJE: se llega al nance por el sendero, se le gana en la arena y
    SÓLO entonces arranca la cinemática del brazo. No hay reloj que la dispare: el
@@ -783,11 +822,31 @@ const ARENA_L=150, ARENA_R=1130;
    tiempo. A cambio pega fuerte —el picado vale dos corazones— para que el asalto
    siga siendo corto y tenso. */
 const DANO_PICADO=2, DANO_PLUMA=1;
+/* EL ASALTO, más exigente en los MOVIMIENTOS (22 sept. 2026). La vida del jefe, lo
+   que quitan los dardos y lo que quita cada golpe suyo NO cambian; cambia cómo vuela:
+   · planea en vaivén en vez de quedarse quieto, y descansa menos entre ataques;
+   · el picado apunta a DONDE VAS (adelanta tu carrera) y sigue ajustando mientras
+     chilla; se fija al lanzarse y una sombra roja en el suelo marca dónde caerá.
+     Quedarse quieto o frenar en seco ya no esquivan: hay que moverse al verla fijarse
+     (en furia, además, al que sigue corriendo recto lo alcanza: hay que dar la vuelta);
+   · entre picados alterna dos acosos: la ráfaga de plumas (también adelantada) y el
+     BARRIDO, una pasada rasante de lado a lado que hay que saltar;
+   · a media vida (furia): el primer picado es un AMAGO que roza el suelo y remonta
+     (el roce quita UN corazón: si no, un solo error costaba los cuatro), la ráfaga se
+     abre en abanico y al estrellarse levanta dos ondas de tierra.
+   Cada valor va en pareja [normal, furia]. */
+const MOV={ hover:[1.15,.8], aim:[.5,.36], dive:[600,690], pluma:[460,500],
+            barrido:[560,640], onda:[0,320] };
+const ADELANTO=.55;                 // ≈ lo que tarda el picado en llegar: al que corre recto lo alcanza
+const mv=k=>MOV[k][boss.furia?1:0];
+const ondas=[];
+let avisoBarrido=false;
 function spawnBoss(){
   boss={x:BOSSX,y:CANOPY_Y,vx:0,vy:0,face:-1,hp:300,maxhp:300,
         state:'canopy',t:0,st:0,wt:1.6,active:false,hitCd:0,next:'dive',
-        dead:false,deadT:0,tx:0,ty:0,gustN:0,fightT:0};
-  feathers.length=0;
+        dead:false,deadT:0,tx:0,ty:0,gustN:0,fightT:0,
+        acoso:'barrido', amago:false, dir:1, sx0:0, sy0:0, vxd:0, vyd:0};
+  feathers.length=0; ondas.length=0;
 }
 function bossGo(state,wt){ boss.state=state; boss.st=0; if(wt!==undefined) boss.wt=wt; }
 function bossGrounded(){ return boss.state==='eat'||boss.state==='stun'||boss.dead; }
@@ -795,11 +854,33 @@ function bossBox(){
   return bossGrounded()? {cy:GROUND-72, hw:84, hh:76}
                        : {cy:boss.y,    hw:88, hh:80};
 }
+/* dónde estará Junajpú: el suelo bajo su carrera, dentro del claro */
+const bossPrevé=()=>Math.max(ARENA_L+30,Math.min(ARENA_R-30, t.x+t.vx*ADELANTO));
+function bossChoca(dano){
+  if(t.inv<=0 && Math.abs(boss.x-t.x)<54 && Math.abs(boss.y-(t.y-46))<54) hurt(boss.x,dano);
+}
+function bossApunta(wt){ bossGo('aim',wt); boss.tx=bossPrevé(); SFX.grito(); }
+/* tras planear: picado, o uno de los dos acosos (se alternan, para que se aprendan) */
+function bossSigue(){
+  if(boss.next==='dive'){
+    boss.amago=!!boss.furia; bossApunta(mv('aim')); boss.next='acoso';
+    return;
+  }
+  boss.next='dive';
+  boss.acoso = boss.acoso==='rafaga'? 'barrido' : 'rafaga';
+  if(boss.acoso==='rafaga'){ bossGo('gust',.9); boss.gustN=0; return; }
+  /* barre desde el filo del lado donde ya está, hacia el otro */
+  boss.dir = boss.x<(ARENA_L+ARENA_R)/2? 1 : -1;
+  bossGo('prebarrido',.75); SFX.grito();
+  if(!avisoBarrido){ avisoBarrido=true; say('¡va a barrer el claro a ras de suelo — sáltalo!',2.6); }
+}
 
 function updBoss(dt){
   if(!boss) return;
+  const x0=boss.x, y0=boss.y;
   boss.t+=dt; boss.st+=dt; boss.hitCd=Math.max(0,boss.hitCd-dt);
   if(boss.active && !boss.dead) boss.fightT+=dt;
+  updOndas(dt);
   if(boss.dead){ boss.deadT+=dt;
     if(boss.y<GROUND) boss.y=Math.min(GROUND,boss.y+300*dt);
     return; }
@@ -826,62 +907,108 @@ function updBoss(dt){
       if(boss.y-CANOPY_Y<10) bossGo('canopy',2.0);
       break;
     case 'rise':
-      boss.y+=(HOVER_Y-boss.y)*2.5*dt;
-      if(Math.abs(boss.y-HOVER_Y)<12) bossGo('hover',1.5);
+      boss.y+=(HOVER_Y-boss.y)*2.8*dt;
+      if(Math.abs(boss.y-HOVER_Y)<14) bossGo('hover',mv('hover'));
       break;
     case 'hover': {
-      const hx=Math.max(ARENA_L,Math.min(ARENA_R, t.x+(d>0?-230:230)));
-      boss.x+=(hx-boss.x)*1.6*dt;
-      boss.y+=(HOVER_Y+Math.sin(boss.t*2)*14-boss.y)*2.2*dt;
+      /* vaivén: se queda de su lado, a ~240 px, pero no quieto —dos senos lentos
+         para que el blanco nunca esté donde apuntaste hace un segundo */
+      const hx=Math.max(ARENA_L,Math.min(ARENA_R,
+                 t.x+(d>0?-240:240)+Math.sin(boss.t*1.4)*70));
+      boss.x+=(hx-boss.x)*2.2*dt;
+      boss.y+=(HOVER_Y-10+Math.sin(boss.t*2.3)*26+Math.sin(boss.t*.9)*14-boss.y)*2.6*dt;
       boss.face=Math.sign(t.x-boss.x)||boss.face; boss.wt-=dt;
-      if(boss.wt<=0){
-        if(boss.next==='dive'){ bossGo('aim',.55); boss.tx=t.x; boss.next='gust'; SFX.grito(); }
-        else { bossGo('gust',.9); boss.gustN=0; boss.next='dive'; }
-      }
+      if(boss.wt<=0) bossSigue();
       break; }
     case 'aim':
+      /* mientras chilla sigue corrigiendo la puntería (la sombra roja se mueve);
+         al lanzarse la fija: ese es el momento de apartarse */
+      boss.tx+=(bossPrevé()-boss.tx)*Math.min(1,5*dt);
+      boss.y+=(HOVER_Y-30-boss.y)*3*dt;               // se encoge antes del picado
       boss.face=Math.sign(boss.tx-boss.x)||boss.face; boss.wt-=dt;
       if(boss.wt<=0){
         /* Se apunta al SUELO bajo el jugador, nunca al jugador en el aire: así el
            picado siempre baja y siempre acaba estrellándose, que es la ventana de daño. */
-        const dx=Math.max(ARENA_L,Math.min(ARENA_R,boss.tx))-boss.x,
-              dy=Math.max(120,(GROUND-24)-boss.y), m=Math.hypot(dx,dy)||1;
-        boss.vx=dx/m*DIVE_V; boss.vy=dy/m*DIVE_V; bossGo('dive');
+        boss.tx=bossPrevé();                           // al lanzarse fija la puntería exacta
+        const dx=boss.tx-boss.x, dy=Math.max(120,(GROUND-24)-boss.y), m=Math.hypot(dx,dy)||1;
+        boss.vx=dx/m*mv('dive'); boss.vy=dy/m*mv('dive'); bossGo('dive');
       }
       break;
     case 'dive':
       boss.x+=boss.vx*dt; boss.y+=boss.vy*dt; boss.face=Math.sign(boss.vx)||boss.face;
-      if(t.inv<=0 && Math.abs(boss.x-t.x)<54 && Math.abs(boss.y-(t.y-46))<54){
-        hurt(boss.x,DANO_PICADO); }
-      if(boss.y>=DIVE_FLOOR){                    // estrellado: se gana la ventana
+      bossChoca(boss.amago? DANO_PLUMA : DANO_PICADO);
+      if(boss.amago && boss.y>=DIVE_FLOOR-40){       // amago: roza el suelo y remonta
+        boss.amago=false; boss.vy=-Math.abs(boss.vy)*.5; bossGo('remonta');
+        burst(boss.x,GROUND-4,PAPER2,6); SFX.salto();
+      } else if(boss.y>=DIVE_FLOOR){                    // estrellado: se gana la ventana
         boss.y=GROUND; bossGo('stun',1.5); burst(boss.x,GROUND,PAPER2,10);
         SFX.choque(); sacude(16,.45);
+        if(boss.furia) ondas.push({x:boss.x,dir:-1,t:0,hit:false},{x:boss.x,dir:1,t:0,hit:false});
       } else if(boss.st>2.4 || boss.x<=ARENA_L || boss.x>=ARENA_R){
-        bossGo('rise');                          // red de seguridad: nunca se pierde
+        bossGo('rise');                                 // red de seguridad: nunca se pierde
       }
+      break;
+    case 'remonta':                                     // sube en curva y vuelve a apuntar
+      boss.x+=boss.vx*dt; boss.vx*=Math.pow(.2,dt);
+      boss.y+=(HOVER_Y-50-boss.y)*3.4*dt;
+      bossChoca(DANO_PLUMA);
+      if(boss.st>.5) bossApunta(.36);
       break;
     case 'stun':
       boss.wt-=dt;
       if(boss.wt<=0) bossGo('rise');
       break;
-    case 'gust':                                 // ráfaga de plumas
+    case 'gust': {                                      // ráfaga de plumas
       boss.face=Math.sign(t.x-boss.x)||boss.face; boss.wt-=dt;
+      boss.x-=boss.face*22*dt;                          // cada soplo lo echa atrás
       if(boss.gustN<3 && boss.wt<.9-.22*(boss.gustN+1)){
         boss.gustN++;
-        const dx=t.x-boss.x, dy=(t.y-50)-boss.y, m=Math.hypot(dx,dy)||1;
-        feathers.push({x:boss.x,y:boss.y,vx:dx/m*430,vy:dy/m*430,life:2.2});
+        const v=mv('pluma'), ox=boss.x+boss.face*30, oy=boss.y,
+              ty=t.y-50, dist=Math.hypot(t.x-ox,ty-oy),
+              a0=Math.atan2(ty-oy, t.x+t.vx*(dist/v)*.6-ox);    // adelanta tu carrera
+        /* en furia, las dos últimas plumas salen en abanico de tres */
+        (boss.furia&&boss.gustN>1? [-.2,0,.2] : [0]).forEach(da=>
+          feathers.push({x:ox,y:oy,vx:Math.cos(a0+da)*v,vy:Math.sin(a0+da)*v,life:2.2}));
         SFX.clavo();
       }
-      if(boss.wt<=0) bossGo('hover',1.5);
-      break;
+      if(boss.wt<=0) bossGo('hover',mv('hover'));
+      break; }
+    case 'prebarrido': {                                // se va al filo, alto, y chilla
+      const ex=boss.dir>0? ARENA_L+20 : ARENA_R-20;
+      boss.x+=(ex-boss.x)*4.5*dt; boss.y+=(HOVER_Y-70-boss.y)*4.5*dt;
+      boss.face=boss.dir; boss.wt-=dt;
+      if(boss.wt<=0){ bossGo('barrido'); boss.sx0=boss.x; boss.sy0=boss.y; SFX.jefe(); }
+      break; }
+    case 'barrido': {                                   // pasada rasante: se salta
+      const x1=boss.dir>0? ARENA_R-20 : ARENA_L+20;
+      boss.x+=boss.dir*mv('barrido')*dt; boss.face=boss.dir;
+      const s=Math.max(0,Math.min(1,(boss.x-boss.sx0)/(x1-boss.sx0)));
+      /* fondo ancho y plano a la altura del pecho: de pie te arrolla, saltando (se
+         sube ~196 px) pasas por encima; en los extremos va alto y no alcanza */
+      boss.y=boss.sy0+((GROUND-78)-boss.sy0)*Math.pow(Math.sin(Math.PI*s),.45);
+      bossChoca(DANO_PLUMA);
+      if(s>=1) bossGo('rise');
+      break; }
   }
   // cinturón y tirantes: pase lo que pase, el jefe vive dentro del claro
   boss.x=Math.max(ARENA_L,Math.min(ARENA_R,boss.x));
   boss.y=Math.max(90,Math.min(GROUND,boss.y));
+  if(dt>0){ boss.vxd=(boss.x-x0)/dt; boss.vyd=(boss.y-y0)/dt; }   // para inclinar el dibujo
   feathers.forEach(f=>{ f.x+=f.vx*dt; f.y+=f.vy*dt; f.life-=dt;
     if(t.inv<=0 && f.life>0 && Math.abs(f.x-t.x)<30 && Math.abs(f.y-(t.y-50))<40){
-      f.life=0; hurt(f.x,DANO_PLUMA); } });
+      f.life=0; hurt(f.x,DANO_PLUMA); }
+    if(f.life>0 && f.y>=GROUND-4){ f.life=0; burst(f.x,GROUND-4,JADE,4); } });   // se clava en la tierra
   for(let i=feathers.length-1;i>=0;i--) if(feathers[i].life<=0) feathers.splice(i,1);
+}
+/* ondas de tierra del picado en furia: salen un instante después del golpe, corren
+   por el suelo hacia los dos lados y sólo alcanzan a quien está pisando tierra */
+function updOndas(dt){
+  ondas.forEach(o=>{ o.t+=dt; if(o.t<.14) return;
+    o.x+=o.dir*MOV.onda[1]*dt;
+    if(Math.random()<.5) burst(o.x,GROUND-2,PAPER2,1);
+    if(!o.hit && t.inv<=0 && t.y>GROUND-22 && Math.abs(o.x-t.x)<24){ o.hit=true; hurt(o.x,DANO_PLUMA); }
+  });
+  for(let i=ondas.length-1;i>=0;i--) if(ondas[i].x<ARENA_L-40||ondas[i].x>ARENA_R+40) ondas.splice(i,1);
 }
 
 function bossDartHit(dd){
@@ -907,13 +1034,13 @@ function bossDartHit(dd){
   if(boss.hp<=0){ bossCae(); return; }
   /* a media vida chilla y aprieta: sin reloj, el aviso es lo que marca el tramo */
   if(!boss.furia && boss.hp<=boss.maxhp*0.5){ boss.furia=true;
-    say('El falso sol chilla de rabia — le queda media luz',2.6); SFX.jefe(); }
+    say('¡Media luz! Ahora amaga el picado y su caída sacude el claro',3); SFX.jefe(); sacude(8,.3); }
 }
 function bossCae(){
   if(!boss||boss.dead) return;
   evento('jefe_derrotado', {segundos_de_pelea: Math.round(boss.fightT)});
   const B=bossBox();
-  boss.hp=0; boss.dead=true; boss.deadT=0; feathers.length=0;
+  boss.hp=0; boss.dead=true; boss.deadT=0; feathers.length=0; ondas.length=0;
   burst(boss.x,B.cy,GOLDS,34); burst(boss.x,B.cy,RED,18);
   SFX.jefe(); SFX.triunfo(); sacude(20,.9); congela(.14);
   say('☀ EL FALSO SOL HA CAÍDO',4);
@@ -2107,43 +2234,103 @@ function drawFeathers(cam){
   feathers.forEach(f=>{
     const px=f.x-cam; if(px<-60||px>CVW+60) return;
     if(okV('projr')){
-      cx.save(); cx.translate(px,f.y); cx.rotate(Math.atan2(f.vy,f.vx));
+      /* el cuadro de la hoja apunta a la IZQUIERDA (la punta brillante a la izquierda
+         y las chispas detrás): sin el espejo, la pluma volaba de culo */
+      cx.save(); cx.translate(px,f.y); cx.rotate(Math.atan2(f.vy,f.vx)); cx.scale(-1,1);
       const im=VC.projr, H=16, W=im.width/im.height*H;
       cx.drawImage(im,-W/2,-H/2,W,H); cx.restore();
     } else { cx.strokeStyle=GOLD; cx.lineWidth=3; line(px,f.y,px-f.vx*.04,f.y-f.vy*.04); }
   });
 }
+/* ondas de tierra: una cresta de polvo con filo de tinta que corre por el suelo */
+function drawOndas(cam){
+  ondas.forEach(o=>{ if(o.t<.14) return;
+    const px=o.x-cam, h=30+7*Math.sin(o.t*28), f=o.dir;
+    cx.save(); cx.translate(px,GROUND+2);
+    cx.fillStyle='rgba(42,28,16,.28)';                    // sombra de la cresta
+    cx.beginPath(); cx.ellipse(-4*f,0,34,6,0,0,7); cx.fill();
+    cx.fillStyle=BONE; cx.strokeStyle=INK; cx.lineWidth=3; cx.lineJoin='round';
+    cx.beginPath(); cx.moveTo(-40*f,0);
+    cx.quadraticCurveTo(-14*f,-h*1.15,12*f,-h*.35);
+    cx.quadraticCurveTo(16*f,-h*.1,22*f,0); cx.closePath(); cx.fill(); cx.stroke();
+    cx.lineWidth=2;                                       // rayas de tierra que salta
+    line(-22*f,-h*.55,-34*f,-h*.9); line(-8*f,-h*.75,-12*f,-h*1.2);
+    cx.restore();
+  });
+}
+/* ángulo de vuelo para inclinar el cuadro, siempre del lado hacia el que mira */
+function bossTilt(){
+  const v=Math.hypot(boss.vxd,boss.vyd); if(v<60) return 0;
+  let a=Math.atan2(boss.vyd,boss.vxd); if(boss.face<0) a=a>0? a-Math.PI : a+Math.PI;
+  return Math.max(-0.9,Math.min(0.9,a));
+}
 function drawBoss(cam){
   if(!boss) return;
   const px=boss.x-cam; if(px<-260||px>CVW+260){ drawFeathers(cam); return; }
   const st=boss.state, grounded=bossGrounded();
+  const volando = st==='dive'||st==='remonta'||st==='barrido';
   let img=null, mirror=false, tilt=0;
+  /* sombra en el suelo: dice dónde está el pájaro en el aire, y crece al bajar */
+  if(!grounded && !boss.dead){
+    const k=Math.max(.2,1-(GROUND-boss.y)/480);
+    cx.fillStyle='rgba(42,28,16,'+(.30*k).toFixed(3)+')';
+    cx.beginPath(); cx.ellipse(px,GROUND-2,24+70*k,4+8*k,0,0,7); cx.fill();
+  }
+  /* la sombra ROJA: dónde va a caer el picado (se mueve mientras apunta, se fija al
+     lanzarse). Es el aviso que hace justo un picado que adelanta tu carrera. */
+  if(st==='aim'||st==='dive'){
+    const tx=boss.tx-cam, fija=st==='dive', p=.5+.5*Math.sin(boss.t*18);
+    const rx=fija?48:58-10*p, ry=fija?10:12-2*p;
+    cx.save(); cx.globalAlpha=fija? .95 : .55+.35*p;
+    cx.fillStyle='rgba(156,44,27,.22)';
+    cx.beginPath(); cx.ellipse(tx,GROUND-3,rx,ry,0,0,7); cx.fill();
+    cx.strokeStyle=INK; cx.lineWidth=fija?6:5; cx.stroke();      // filo de tinta debajo
+    cx.strokeStyle=RED; cx.lineWidth=fija?3.5:2.5; cx.stroke();
+    cx.beginPath(); cx.ellipse(tx,GROUND-3,16,3.5,0,0,7); cx.stroke();
+    cx.restore();
+  }
   /* Los ataques se animan con boss.st (tiempo DENTRO del estado) para que siempre
      arranquen en el cuadro 1. El picado y la ráfaga usan las hojas de vuelo
      horizontal, que sí son un ciclo limpio: las de vc_dive y vc_atk cambian de
      tamaño dentro de la misma hoja y el pájaro parpadeaba y se encogía. */
   if(boss.dead){ const i=Math.min(VC_N.death,1+Math.floor(boss.deadT*5)); img=VC['death'+i]; mirror=boss.face<0; }
   else if(st==='canopy'||st==='eat'){ img=vcF('idle',boss.t,6); mirror=boss.face<0; }
-  else if(st==='dive'){
-    img=vcF(boss.face>0?'flyr':'flyl',boss.st,14);
-    const ang=Math.atan2(boss.vy,boss.vx);
-    tilt = boss.face>0? ang : ang-Math.PI;
-    tilt = Math.max(-0.9,Math.min(0.9,tilt));
-  }
-  else if(st==='gust'){ img=vcF('hover',boss.st,14); mirror=boss.face<0; }
+  else if(volando){ img=vcF(boss.face>0?'flyr':'flyl',boss.st,14); tilt=bossTilt(); }
+  else if(st==='gust'||st==='prebarrido'){ img=vcF('hover',boss.st,14); mirror=boss.face<0; }
   else if(st==='stun'){ img=vcF('hurt',boss.st,5); mirror=boss.face<0; }
   else { img=vcF('hover',boss.t,10); mirror=boss.face<0; }
+  /* trazos de velocidad, a tinta, detrás del pájaro */
+  if(volando && Math.hypot(boss.vxd,boss.vyd)>300){
+    const a=Math.atan2(boss.vyd,boss.vxd), ux=Math.cos(a), uy=Math.sin(a);
+    /* dos tonos (tinta debajo, hueso encima) para que se lean sobre el follaje
+       oscuro y sobre el cielo claro */
+    cx.save(); cx.lineCap='round'; cx.globalAlpha=.8;
+    [[INK,3.5],[BONE,1.6]].forEach(([col,w])=>{ cx.strokeStyle=col; cx.lineWidth=w;
+      for(let i=-1;i<=1;i++){ const o=i*20, l=i? 34 : 52, b=100+12*Math.abs(i);
+        const sx=px-ux*b-uy*o, sy=boss.y-uy*b+ux*o;
+        line(sx,sy,sx-ux*l,sy-uy*l); } });
+    cx.restore();
+  }
   cx.save(); cx.translate(px, grounded? GROUND : boss.y);
   if(tilt) cx.rotate(tilt);
-  if(boss.hitCd>0 && Math.floor(boss.hitCd*30)%2===0) cx.globalAlpha=.5;
-  if(boss.dead) cx.globalAlpha=Math.max(.25,1-boss.deadT*.10);
   if(mirror) cx.scale(-1,1);
-  if(ok(img)) drawAnchored(img,BOSS_H,null,!grounded);
+  if(ok(img)){
+    drawAnchored(img,BOSS_H,null,!grounded);
+    /* destello de golpe como silueta clara ENCIMA del cuadro, y al morir se apaga
+       hacia la tinta: nunca se vuelve transparente, que es lo que dejaba ver el fondo */
+    const fl=boss.hitCd>0? Math.min(1,boss.hitCd/.15) : 0;
+    if(boss.dead){ cx.globalAlpha=Math.min(.6,boss.deadT*.2); drawAnchored(img,BOSS_H,null,false,tinted(img,INK)); }
+    else if(fl>0){ cx.globalAlpha=.6*fl; drawAnchored(img,BOSS_H,null,!grounded,tinted(img,'#fff3d6')); }
+    else if(boss.furia && st!=='stun'){                 // en furia arde: un pulso rojo
+      cx.globalAlpha=.10+.08*Math.sin(boss.t*7); drawAnchored(img,BOSS_H,null,!grounded,tinted(img,'#e0401f')); }
+    cx.globalAlpha=1;
+  }
   else { cx.fillStyle=RED; cx.beginPath(); cx.ellipse(0,grounded?-60:0,60,40,0,0,7); cx.fill(); }
   cx.restore();
+  drawOndas(cam);                                   // delante del pájaro: se ven al salir
   if(!boss.dead){
     cx.textAlign='center';
-    if(st==='aim'){ cx.font='700 30px Georgia'; inkText('!',px,boss.y-104,RED,null,5); }
+    if(st==='aim'||st==='prebarrido'){ cx.font='700 30px Georgia'; inkText('!',px,boss.y-104,RED,null,5); }
     if((st==='eat'&&!boss.active)||st==='stun'){
       const pulso=.65+.35*Math.sin(boss.st*9);
       cx.save(); cx.globalAlpha=pulso; cx.font='700 17px Georgia';
@@ -2379,6 +2566,7 @@ function drawHUD(){
     cx.fillStyle='rgba(42,28,16,.45)'; cx.fillRect(CVW/2-220,44,440,9);
     cx.fillStyle=RED; cx.fillRect(CVW/2-220,44,440*Math.max(0,boss.hp/boss.maxhp),9);
     cx.strokeStyle=INK; cx.lineWidth=2; cx.strokeRect(CVW/2-220,44,440,9);
+    line(CVW/2,40,CVW/2,57);                    // media luz: ahí entra en furia
   }
   // — aviso —
   if(notice.t>0){
@@ -2512,6 +2700,7 @@ const CONSEJOS=[
   'El TECOLOTE no pelea: grita y llama guardianes. Cállalo primero.',
   'Los BRASEROS DE COPAL curan y son el sitio donde vuelves si caes.',
   'A Vucub Caquix se le embosca cuando BAJA a comer al suelo: ahí parpadea «¡ahora!».',
+  'La SOMBRA ROJA marca dónde cae su picado. Su barrido rasante se esquiva SALTANDO.',
 ];
 function drawControles(){
   drawFondoLamina(CODEX[1],.22);
