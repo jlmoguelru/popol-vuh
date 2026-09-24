@@ -9,6 +9,9 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
+  /* jugar en local (JUGAR.command, pruebas) no cuenta: sólo la web publicada */
+  if (/^(localhost|127\.0\.0\.1|)$/.test(location.hostname))
+    window['ga-disable-G-MV8PZBKFY2'] = true;
 
   gtag('config', 'G-MV8PZBKFY2');
 </script>
@@ -19,15 +22,16 @@
      100vh el de toda la vida (que mide la ventana entera y deja la franja de
      arriba debajo de la barra). */
   :root{ --paper:#d8bd86; --ink:#2a1c10; --red:#9c2c1b; --golds:#e6cd8b;
-         --vw:100vw; --vh:100vh; }
-  @supports (height:100dvh){ :root{ --vh:100dvh; } }
+         --vw:100vw; --vh:100vh; --sw:100vw; --sh:100vh; }
+  @supports (height:100dvh){ :root{ --vh:100dvh; --sh:100dvh; } }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%; background:#0d0905; overflow:hidden;
             font-family:Georgia,'Times New Roman',serif; color:var(--golds);
             -webkit-tap-highlight-color:transparent;}
-  #stage{position:fixed; left:0; top:0; width:var(--vw); height:var(--vh);
+  /* --sw/--sh: medidas del ESCENARIO; en «girado» son las de la pantalla cruzadas */
+  #stage{position:fixed; left:0; top:0; width:var(--sw); height:var(--sh); transform-origin:0 0;
          display:flex; align-items:center; justify-content:center;}
-  canvas{max-width:var(--vw); max-height:var(--vh); aspect-ratio:16/9; background:#0d0905;
+  canvas{max-width:var(--sw); max-height:var(--sh); aspect-ratio:16/9; background:#0d0905;
          touch-action:none; display:block;}
 
   /* ---------- botones de esquina (pantalla completa y pausa) ---------- */
@@ -95,17 +99,10 @@
      fallar el botón de saltar o el de tiro en plena pelea */
   @media (max-height:520px){ .tb{width:74px;height:74px;font-size:13px;}
     .joy{width:112px;height:112px;} .joy .perilla{width:50px;height:50px;margin:-25px 0 0 -25px;} }
+  body.girado .tb{width:74px;height:74px;font-size:13px;}
+  body.girado .joy{width:112px;height:112px;}
+  body.girado .joy .perilla{width:50px;height:50px;margin:-25px 0 0 -25px;}
 
-  /* ---------- vertical: el juego es 16:9, en retrato quedaría una franja ---------- */
-  #gira{position:fixed; left:0; top:0; width:var(--vw); height:var(--vh); z-index:50; display:none; flex-direction:column;
-        align-items:center; justify-content:center; gap:16px; text-align:center; padding:24px;
-        background:radial-gradient(80% 80% at 50% 40%,#241809,#0b0704); color:#e7d4a8;}
-  #gira .g{width:40px; height:70px; border:3px solid #e7d4a8; border-radius:8px;
-           position:relative; animation:gir 2.4s ease-in-out infinite;}
-  #gira .g::after{content:''; position:absolute; left:50%; bottom:6px; width:16px; height:2px;
-                  transform:translateX(-50%); background:#e7d4a8; border-radius:2px; opacity:.8;}
-  @keyframes gir{0%,45%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
-  @media (orientation:portrait) and (pointer:coarse){ #gira{display:flex;} }
 </style>
 </head>
 <body>
@@ -127,7 +124,6 @@
 </div>
 </div>
 
-<div id="gira"><div class="g"></div><div>Gira el teléfono<br><small style="opacity:.65">el códice se lee a lo ancho</small></div></div>
 
 <div id="load">
   <h1>POPOL VUH</h1>
@@ -157,10 +153,12 @@ let SCALE=1;
    cada lámina pre-escalada ocupa memoria. */
 const SCALE_MAX=(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window)?1.25:1.5;
 function fitCanvas(){
-  const r=cv.getBoundingClientRect();
-  if(!r.width||!r.height) return;
+  /* offsetWidth/Height y no getBoundingClientRect: con el escenario girado la caja
+     en pantalla sale con ancho y alto cruzados */
+  const rw=cv.offsetWidth, rh=cv.offsetHeight;
+  if(!rw||!rh) return;
   const dpr=Math.min(devicePixelRatio||1,2);
-  const s=Math.max(1, Math.min(SCALE_MAX, Math.min(r.width/CVW, r.height/CVH)*dpr));
+  const s=Math.max(1, Math.min(SCALE_MAX, Math.min(rw/CVW, rh/CVH)*dpr));
   const w=Math.round(CVW*s), h=Math.round(CVH*s);
   if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
   SCALE=w/CVW;
@@ -171,16 +169,32 @@ function fitCanvas(){
    arriba —el retrato y las cuentas de jade— quedaba tapada por la barra.
    visualViewport sí mide lo que queda a la vista, y cambia cuando la barra
    aparece o se esconde. */
+/* ---------- teléfono en vertical: el escenario se dibuja GIRADO ----------
+   Los navegadores de dentro de Instagram y Facebook no giran NUNCA: aunque el
+   teléfono tenga la rotación activada, la página se queda en vertical. Antes
+   salía un cartel de «gira el teléfono» que en esas apps no se quitaba jamás, y
+   quien abría el enlace desde una publicación no podía jugar. Ahora, si la página
+   está en vertical en un teléfono, todo el escenario (lienzo y botones) se gira
+   90°: pones el teléfono de lado y se juega igual. En un navegador que sí gira, al
+   ponerlo de lado la página pasa a horizontal y el giro se quita solo. */
+const PANTALLA_TACTIL=matchMedia('(pointer:coarse)').matches;
+let GIRADO=false;
 function fitViewport(){
   const vv=window.visualViewport;
   const w=Math.round(vv?vv.width:innerWidth), h=Math.round(vv?vv.height:innerHeight);
   if(!w||!h) return;
+  GIRADO = PANTALLA_TACTIL && h>w;
+  document.body.classList.toggle('girado',GIRADO);
   const st=document.documentElement.style;
   st.setProperty('--vw', w+'px');
   st.setProperty('--vh', h+'px');
+  st.setProperty('--sw', (GIRADO?h:w)+'px');
+  st.setProperty('--sh', (GIRADO?w:h)+'px');
   /* algunos navegadores desplazan el área visible en vez de encogerla */
   const esc=document.getElementById('stage');
-  if(esc && vv) esc.style.transform = vv.offsetTop? 'translateY('+Math.round(vv.offsetTop)+'px)' : '';
+  const oy = vv&&vv.offsetTop? Math.round(vv.offsetTop) : 0;
+  if(esc) esc.style.transform = GIRADO? 'translate('+w+'px,'+oy+'px) rotate(90deg)'
+                                      : (oy? 'translateY('+oy+'px)' : '');
   fitCanvas();
 }
 addEventListener('resize',fitViewport);
@@ -235,7 +249,7 @@ const VIDA_BASE=4;
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-22 15:16';
+const VERSION='2026-09-24 11:12';
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -664,7 +678,9 @@ const marcas={n:joy.querySelector('.n'),s:joy.querySelector('.s'),o:joy.querySel
 let joyDedo=null;
 function joyMueve(e){
   const r=joy.getBoundingClientRect(), rad=r.width/2, max=rad*.6;
-  let dx=e.clientX-(r.left+rad), dy=e.clientY-(r.top+rad);
+  const sx=e.clientX-(r.left+rad), sy=e.clientY-(r.top+rad);
+  /* girado 90°: la derecha del juego es el ABAJO de la pantalla */
+  let dx=GIRADO? sy : sx, dy=GIRADO? -sx : sy;
   const d=Math.hypot(dx,dy);
   if(d>max){ dx=dx/d*max; dy=dy/d*max; }
   perilla.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)';
@@ -699,7 +715,8 @@ document.getElementById('bPausa').addEventListener('click',e=>{ e.preventDefault
 /* clic/toque sobre el lienzo: avanza cinemáticas y confirma en los menús */
 cv.addEventListener('pointerdown',e=>{
   const rc=cv.getBoundingClientRect();
-  const fx=(e.clientX-rc.left)/rc.width, fy=(e.clientY-rc.top)/rc.height;
+  const fx=GIRADO? (e.clientY-rc.top)/rc.height  : (e.clientX-rc.left)/rc.width,
+        fy=GIRADO? (rc.right-e.clientX)/rc.width : (e.clientY-rc.top)/rc.height;
   onTap(fx,fy);
 });
 
