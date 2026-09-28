@@ -95,11 +95,18 @@
   .joy i.e{right:7px;  top:50%;  margin-top:-6px;  border-left-color:#e6cd8b;}
   .joy i.vivo{opacity:1;}
   .tgrp{display:flex; gap:13px; align-items:flex-end;}
+  /* lado de acción: GOLPE arriba, entre TIRO y SALTO — un triángulo que el pulgar
+     recorre sin mirar, como en los mandos de consola */
+  .tgrp.accion{flex-direction:column; align-items:center; gap:8px;}
+  .tgrp.accion .fila{display:flex; gap:13px;}
+  .tb.golpe{width:78px; height:78px; border-color:rgba(230,205,139,.6);}
   /* en pantallas bajas se encogen, pero mucho menos que antes: con 54 px era fácil
      fallar el botón de saltar o el de tiro en plena pelea */
   @media (max-height:520px){ .tb{width:74px;height:74px;font-size:13px;}
     .joy{width:112px;height:112px;} .joy .perilla{width:50px;height:50px;margin:-25px 0 0 -25px;} }
+  @media (max-height:520px){ .tb.golpe{width:68px;height:68px;} .tgrp.accion{gap:6px;} }
   body.girado .tb{width:74px;height:74px;font-size:13px;}
+  body.girado .tb.golpe{width:68px;height:68px;}
   body.girado .joy{width:112px;height:112px;}
   body.girado .joy .perilla{width:50px;height:50px;margin:-25px 0 0 -25px;}
 
@@ -120,7 +127,8 @@
 
 <div id="tbtns">
   <div class="tgrp"><div class="joy" id="joy"><i class="n"></i><i class="s"></i><i class="o"></i><i class="e"></i><div class="perilla"></div></div><div class="tb" data-vk="duck">Agach.</div></div>
-  <div class="tgrp"><div class="tb" data-vk="shoot">Tiro</div><div class="tb" data-vk="jump">Salto</div></div>
+  <div class="tgrp accion"><div class="tb golpe" data-vk="golpe">Golpe</div>
+    <div class="fila"><div class="tb" data-vk="shoot">Tiro</div><div class="tb" data-vk="jump">Salto</div></div></div>
 </div>
 </div>
 
@@ -249,7 +257,227 @@ const VIDA_BASE=4;
    está viendo la versión nueva o una guardada en su caché: los navegadores de
    móvil se aferran al index.html hasta diez minutos, y sin este dato no hay forma
    de distinguir «el arreglo no funciona» de «tu teléfono no lo ha descargado». */
-const VERSION='2026-09-24 11:12';
+const VERSION='2026-09-28 13:54';
+
+/* ================= IDIOMA · LANGUAGE =================
+   El juego se escribe en español y cada texto visible pasa por tr(): en inglés se
+   busca en EN usando el texto español como clave; si falta, sale el español (así
+   nada se rompe si se edita un texto y se olvida su traducción; en local la
+   consola avisa de las que faltan, ver revisaTraducciones()).
+   Nombres y términos en inglés según la traducción de Allen J. Christenson
+   («Popol Vuh: Sacred Book of the Quiché Maya People», Mesoweb 2007): Hunahpu,
+   Xbalanque, Seven Macaw, Lady Blood, One Batz y One Chouen… Las frases son
+   versiones propias y breves, no citas del libro.
+   Idioma: ?lang=en|es en la dirección > el elegido antes (localStorage) > el del
+   navegador (español si empieza por «es»; si no, inglés). */
+let LANG=(()=>{
+  try{ const q=new URLSearchParams(location.search).get('lang');
+       if(q==='en'||q==='es') return q;
+       const s=localStorage.getItem('pv_lang'); if(s==='en'||s==='es') return s; }catch(_){}
+  return /^es\b/i.test(navigator.language||'es')? 'es' : 'en';
+})();
+const EN={
+  /* --- pantalla de carga, título y botones --- */
+  'Popol Vuh · Junajpú y el falso sol':'Popol Vuh · Hunahpu and the False Sun',
+  'Junajpú y el falso sol':'Hunahpu and the False Sun',
+  'ABRIENDO EL LIBRO…':'OPENING THE BOOK…',
+  'Pantalla completa':'Fullscreen', 'Pausa':'Pause',
+  'Agach.':'Duck', 'Tiro':'Shoot', 'Salto':'Jump', 'Golpe':'Strike',
+  /* --- pistas y avisos --- */
+  'A · D  o  ← →   para andar':'A · D  or  ← →   to walk',
+  'mueve el joystick para andar':'move the joystick to walk',
+  'ESPACIO  para saltar':'SPACE  to jump',
+  'toca  SALTO  para saltar':'tap  JUMP  to jump',
+  'una CASA DE LOS ESCRIBAS:  ponte en la puerta y pulsa E':'a HOUSE OF THE SCRIBES:  stand in the doorway and press E',
+  'una CASA DE LOS ESCRIBAS:  ponte en la puerta y toca la pantalla':'a HOUSE OF THE SCRIBES:  stand in the doorway and tap the screen',
+  'MANTÉN K  y suelta:  cerbatana — cuanto más cargas, más duele':'HOLD K  and release:  blowgun — the longer you charge, the harder it hits',
+  'MANTÉN  TIRO  y suelta:  cerbatana — cuanto más cargas, más duele':'HOLD  SHOOT  and release:  blowgun — the longer you charge, the harder it hits',
+  'J  para el puñal:  pulsa tres veces seguidas y encadenas tres golpes':'J  for the knife:  press three times in a row to chain three strikes',
+  'GOLPE  para el puñal:  tócalo tres veces seguidas y encadenas tres golpes':'STRIKE  for the knife:  tap three times in a row to chain three strikes',
+  'mantén  W  o  ↑  y dispara:  la cerbatana apunta hacia arriba':'hold  W  or  ↑  and shoot:  the blowgun aims upward',
+  'joystick ARRIBA + TIRO:  dispara hacia arriba':'joystick UP + SHOOT:  shoot upward',
+  'al alacrán sólo lo hieres POR LA ESPALDA':'the scorpion can only be hurt FROM BEHIND',
+  'C  para agacharte:  a las arañas se les da a ras de suelo':'C  to duck:  spiders are hit low, along the ground',
+  'AGACH.:  a las arañas se les da a ras de suelo':'DUCK:  spiders are hit low, along the ground',
+  '¡telaraña!  muévete para zafarte':'spider web!  wriggle to break free',
+  '¡va a barrer el claro a ras de suelo — sáltalo!':'he will sweep the clearing at ground level — jump it!',
+  'come en el suelo: ¡dispárale AHORA con la cerbatana!':'he is eating on the ground: shoot him NOW with the blowgun!',
+  '¡EMBOSCADA! El falso sol chilla de rabia':'AMBUSH! The false sun shrieks with rage',
+  '¡Media luz! Ahora amaga el picado y su caída sacude el claro':'Half his light is gone! Now he feints his dive, and his crash shakes the clearing',
+  '☀ EL FALSO SOL HA CAÍDO':'☀ THE FALSE SUN HAS FALLEN',
+  'EL CLARO DEL NANCE · derríbalo: su picado vale dos corazones':'THE NANCE CLEARING · bring him down: his dive costs two hearts',
+  'TOCA LA PANTALLA PARA SEGUIR EL CAMINO':'TAP THE SCREEN TO FOLLOW THE PATH',
+  'E  ·  SEGUIR EL CAMINO':'E  ·  FOLLOW THE PATH',
+  'el falso sol come al final del sendero':'the false sun feeds at the end of the trail',
+  '¡el tecolote llamó a un guardián!':'the owl called a guardian!',
+  'el pedernal rebota — dispárale por la espalda':'the flint deflects it — shoot it from behind',
+  'el pedernal para el puñal — rodéalo':'the flint stops your knife — get around it',
+  'la casa de los escribas quedó atrás:  dentro te espera un don':'you left the house of the scribes behind:  a gift waits inside',
+  'CUENTA DE JADE  ·  resistes un golpe más':'JADE BEAD  ·  you can take one more hit',
+  'el falso sol vuelve al nance… espera a que baje':'the false sun returns to the nance… wait for him to come down',
+  'brasero de copal encendido · aquí volverás':'copal brazier lit · you will return here',
+  'música: sí':'music: on', 'música: no':'music: off',
+  'copal':'copal', '¡la espalda!':'its back!', '¡AHORA!':'NOW!',
+  /* --- la casa de los escribas (pendiente de revisión del divulgador, como el español) --- */
+  "JUN BATZ'  y  JUN CHOWEN  ·  los monos escribas":'ONE BATZ  and  ONE CHOUEN  ·  the scribe monkeys',
+  "¿Junajpú? Hacía mucho que no te veíamos, hermano. Somos Jun Batz' y Jun Chowen, los escribas.":
+    "Hunahpu? We haven't seen you in a long time, brother. We are One Batz and One Chouen, the scribes.",
+  'Tú y Xbalanqué nos convirtieron en monos… pero nadie nos quitó el oficio: los pintores, los escribas y los músicos nos siguen invocando.':
+    'You and Xbalanque turned us into monkeys… but no one took away our craft: painters, scribes and musicians still call upon us.',
+  'Escucha cómo funciona esto. En el camino hay más casas como esta, y algunas están escondidas: fíjate en las piedras con luz en la puerta.':
+    'Listen to how this works. There are more houses like this one along the way, and some are hidden: look for glowing stones by the door.',
+  'En cada una verás un glifo en la estela y te haremos UNA pregunta sobre él. Cuatro respuestas; sólo una es la buena.':
+    "In each one you'll see a glyph on the stela, and we'll ask you ONE question about it. Four answers; only one is right.",
+  'Si aciertas, te llevas un don que te acompaña hasta el final del viaje. Si fallas, te damos una pista y vuelves a intentarlo: aquí no se pierde nada por equivocarse.':
+    'Get it right and you take a gift that stays with you to the end of the journey. Get it wrong and we give you a clue and you try again: nothing is lost here by making a mistake.',
+  'Empecemos por lo primero que aprende un escriba: los números.':"Let's begin with the first thing a scribe learns: numbers.",
+  'Los escribas contaban con puntos y barras: cada punto vale 1 y cada barra vale 5. ¿Qué número está grabado en la estela?':
+    'Scribes counted with dots and bars: each dot is worth 1 and each bar is worth 5. What number is carved on the stela?',
+  'Cuenta otra vez: cada barra vale cinco, así que las dos barras ya suman diez. Ahora suma los puntos de encima.':
+    'Count again: each bar is worth five, so the two bars already make ten. Now add the dots on top.',
+  '¡Trece! Dos barras y tres puntos. Con este sistema los mayas contaban de veinte en veinte, y tenían un signo para el cero.':
+    'Thirteen! Two bars and three dots. With this system the Maya counted in twenties, and they had a sign for zero.',
+  'El trece es sagrado: en el calendario ritual de 260 días, los números del 1 al 13 se combinan con 20 días. Hasta tu nombre es una fecha de ese calendario: Jun Ajpu, el día Uno Ajpu.':
+    'Thirteen is sacred: in the 260-day ritual calendar, the numbers 1 to 13 combine with 20 days. Even your name is a date in that calendar: Hunahpu, Jun Ajpu, the day One Ajpu.',
+  'Toma esta CUENTA DE JADE. Para los mayas el jade era lo más precioso, ligado al aliento y a la vida. Desde ahora resistes un golpe más.':
+    'Take this JADE BEAD. For the Maya, jade was the most precious thing of all, bound to breath and to life. From now on you can take one more hit.',
+  'Ya leíste nuestra estela, hermano. Que el jade te cuide en el camino.':"You've already read our stela, brother. May the jade watch over you on the road.",
+  'Volver a la selva':'Back to the jungle', 'Intentarlo otra vez':'Try again',
+  'TOCA LA PANTALLA PARA ENTRAR':'TAP THE SCREEN TO ENTER', 'E  ·  ENTRAR EN LA CASA':'E  ·  ENTER THE HOUSE',
+  'la casa de los escribas':'the house of the scribes', 'dentro te espera un enigma':'a riddle awaits inside',
+  'CASA DE LOS ESCRIBAS':'HOUSE OF THE SCRIBES',
+  'toca tu respuesta':'tap your answer', '←  →  para elegir   ·   ENTER para responder':'←  →  to choose   ·   ENTER to answer',
+  'toca para seguir  ▸':'tap to continue  ▸', 'ENTER para seguir  ▸':'ENTER to continue  ▸',
+  '←  salir':'←  leave', '←  salir (ESC)':'←  leave (ESC)',
+  /* --- apertura del códice --- */
+  'Raíz de la palabra antigua':'The root of the ancient word',
+  'Esta es la historia de cuando todo callaba. El cielo estaba vacío y el mar, en calma.':
+    'This is the account of when all was silent. The sky lay empty, and the sea was calm.',
+  'Los primeros gemelos':'The first twins',
+  'Antes de los héroes hubo dos hermanos: Jun Junajpú y Vucub Junajpú. Su juego de pelota sacudía la tierra.':
+    'Before the heroes there were two brothers: One Hunahpu and Seven Hunahpu. Their ballgame shook the earth.',
+  'La ira de los muertos':'The wrath of the dead',
+  'En Xibalbá, los Señores de la Muerte despertaron furiosos y los llamaron a su reino de trampas.':
+    'In Xibalba, the Lords of Death awoke in fury and summoned them to their kingdom of traps.',
+  'La derrota':'The defeat',
+  'Bajaron, y no vencieron. La cabeza de Jun Junajpú fue colgada de un árbol seco de jícaro.':
+    'They went down, and they did not prevail. The head of One Hunahpu was hung in a barren calabash tree.',
+  'Ixquic, Luna de Sangre':'Xquic, Lady Blood',
+  'Ixquic, hija de un Señor de la Muerte, se acercó al árbol prohibido. La calavera escupió en su mano abierta.':
+    'Lady Blood, daughter of a Lord of Death, came to the forbidden tree. The skull spat into her open hand.',
+  'La huida':'The escape',
+  'Encinta de dos vidas, Ixquic escapó del inframundo y subió a la casa de la abuela Xmucané.':
+    'Carrying two lives, Lady Blood fled the underworld and climbed to the house of Grandmother Xmucane.',
+  'El nacimiento de los héroes':'The birth of the heroes',
+  'Así nacieron los Gemelos Héroe: Junajpú e Xbalanqué, destinados a vencer a la muerte y a la soberbia.':
+    'So the Hero Twins were born: Hunahpu and Xbalanque, destined to defeat death and pride.',
+  'El falso sol':'The false sun',
+  'Pero sobre la tierra, antes del verdadero amanecer, un gigante presumía de ser el sol: Vucub Caquix, el Siete Guacamayo.':
+    'But on the earth, before the true dawn, a giant boasted that he was the sun: Vucub Caquix, Seven Macaw.',
+  'Toma la cerbatana. El nance está al final de la selva.':'Take up the blowgun. The nance tree stands at the end of the jungle.',
+  /* --- el brazo de Junajpú --- */
+  'Cada día, al alba, el falso sol subía al nance a comer.':'Every day at dawn, the false sun climbed the nance tree to eat.',
+  'Los dos muchachos lo aguardaban escondidos entre las hojas.':'The two boys lay in wait for him, hidden among the leaves.',
+  '¡Aaay! ¡Mi quijada!':'Aaah! My jaw!', 'VUCUB CAQUIX':'SEVEN MACAW',
+  'El bodoque halló su boca.':'The pellet found his mouth.',
+  'Cayó desde la cumbre del árbol hasta la faz de la tierra.':'He fell from the top of the tree to the face of the earth.',
+  'Junajpú corrió a sujetarlo. No debió.':'Hunahpu ran to seize him. He should not have.',
+  '¡Suéltame, malvado!':'Let go of me, wretch!',
+  'Le arrancó el brazo, torcido hacia atrás.':'He tore off his arm, wrenching it back.',
+  'Se fue a su casa sosteniéndose la quijada, llevando el brazo de Junajpú.':'He went home holding his jaw, carrying the arm of Hunahpu.',
+  'Cuélgalo sobre el fuego. Vendrán por él.':'Hang it over the fire. They will come for it.',
+  '—¿Qué traes ahí? —dijo Chimalmat.':'“What have you brought there?” asked Chimalmat.',
+  'No fueron derrotados del todo. Aún.':'They were not wholly defeated. Not yet.',
+  /* --- cierre --- */
+  'El verdadero amanecer':'The true dawn',
+  'El falso sol cayó del nance. Su luz no era luz: era oro, era piedra verde, era soberbia.':
+    'The false sun fell from the nance tree. His light was no light: it was gold, it was greenstone, it was pride.',
+  'El camino sigue':'The road goes on',
+  'Junajpú e Xbalanqué siguieron su camino. Aún los esperaban los hijos del falso sol, y después, Xibalbá.':
+    'Hunahpu and Xbalanque went on their way. The sons of the false sun still awaited them, and after that, Xibalba.',
+  'FIN DEL PRIMER PASAJE':'END OF THE FIRST PASSAGE',
+  '←  ·  → / ESPACIO  ·  ESC salta la escena':'←  ·  → / SPACE  ·  ESC skips the scene',
+  /* --- HUD, menús y pantallas --- */
+  'VUCUB CAQUIX · EL FALSO SOL':'SEVEN MACAW · THE FALSE SUN', 'ESC · pausa':'ESC · pause',
+  '▶  Comenzar el relato':'▶  Begin the story', 'Saltar a la selva':'Skip to the jungle',
+  'Controles':'Controls', 'Música':'Music', 'sí':'on', 'no':'off',
+  'E L   L I B R O   D E L   C O N S E J O':'T H E   B O O K   O F   T H E   C O U N C I L',
+  '↑ ↓  elegir   ·   ENTER  aceptar   ·   también puedes hacer clic':'↑ ↓  choose   ·   ENTER  accept   ·   you can also click',
+  'demo jugable · primer pasaje · arte y música del proyecto':'playable demo · first passage · original art and music',
+  'A · D   o   ← →':'A · D   or   ← →', 'andar':'walk',
+  'ESPACIO   o   Z':'SPACE   or   Z', 'saltar':'jump',
+  'K   o   X   (mantener y soltar)':'K   or   X   (hold and release)',
+  'cerbatana — cuanto más cargas, más lejos y más fuerte':'blowgun — the longer you charge, the farther and harder it hits',
+  'J   o   V':'J   or   V',
+  'puñal: pulsa varias veces para encadenar tres golpes':'knife: press repeatedly to chain three strikes',
+  'W · ↑    /    S · ↓   (mantener)':'W · ↑    /    S · ↓   (hold)',
+  'apuntar la cerbatana hacia arriba  /  hacia abajo':'aim the blowgun up  /  down',
+  'C   o   L   (mantener)':'C   or   L   (hold)',
+  'agacharse: no avanzas, pero disparas a ras de suelo':"duck: you can't move, but you shoot along the ground",
+  'E  /  ENTER':'E  /  ENTER',
+  'entrar en casas  ·  seguir el sendero del nance':'enter houses  ·  follow the nance trail',
+  'ESC  ·  M  ·  F':'ESC  ·  M  ·  F', 'pausa  ·  música  ·  pantalla completa':'pause  ·  music  ·  fullscreen',
+  'joystick':'joystick', 'andar: inclinado a medias caminas, a fondo corres':'walk: tilt halfway to walk, all the way to run',
+  'joystick  ↑ / ↓  +  TIRO':'joystick  ↑ / ↓  +  SHOOT', 'disparar hacia arriba  /  hacia abajo':'shoot up  /  down',
+  'SALTO':'JUMP', 'TIRO  (mantener y soltar)':'SHOOT  (hold and release)',
+  'GOLPE':'STRIKE', 'puñal: tócalo varias veces para encadenar tres golpes':'knife: tap repeatedly to chain three strikes',
+  'AGACH.  (mantener)':'DUCK  (hold)',
+  'tocar la pantalla':'tap the screen', 'entrar en casas · seguir el sendero (cuando sale el aviso)':'enter houses · follow the trail (when prompted)',
+  'botones de arriba':'top buttons', 'pantalla completa y pausa':'fullscreen and pause',
+  'Las ARAÑAS escupen telarañas: si te pegan, muévete para zafarte, o revienta la tela con un dardo o un tajo.':
+    'SPIDERS spit webs: if one sticks, wriggle free — or burst the web with a dart or a slash.',
+  'Dispara HACIA ARRIBA al tecolote en su percha y a Vucub Caquix cuando vuela.':'Shoot UPWARD at the owl on its perch and at Seven Macaw in flight.',
+  'El ALACRÁN lleva pedernal de frente y su aguijón hace DOBLE daño. Sáltalo y hiérelo por la espalda.':
+    'The SCORPION carries flint in front and its sting does DOUBLE damage. Jump it and strike it from behind.',
+  'El ESQUELETO embiste desde lejos: no retrocedas, sáltalo.':"The SKELETON charges from afar: don't back away — jump over it.",
+  'El TECOLOTE llama guardianes y se lanza en picado a donde vas: da la vuelta para esquivarlo.':
+    "The OWL calls guardians and dives at where you're heading: turn back to dodge it.",
+  'El PUÑAL encadena tres golpes; su tajo corta telarañas y plumas en el aire.':'The KNIFE chains three strikes; its slash cuts webs and feathers out of the air.',
+  'Los BRASEROS DE COPAL curan y son el sitio donde vuelves si caes.':'COPAL BRAZIERS heal you, and they are where you return if you fall.',
+  'A Vucub Caquix se le embosca cuando BAJA a comer al suelo: ahí parpadea «¡ahora!».':
+    "Ambush Seven Macaw when he COMES DOWN to eat on the ground: that's when «NOW!» flashes.",
+  'La SOMBRA ROJA marca dónde cae su picado. Su barrido rasante se esquiva SALTANDO.':
+    'The RED SHADOW marks where his dive will land. Dodge his low sweep by JUMPING.',
+  'CONTROLES':'CONTROLS', 'DEL LIBRO':'FROM THE BOOK', 'ESC  ·  volver':'ESC  ·  back',
+  'EL LIBRO SE CIERRA':'THE BOOK CLOSES', '· un momento ·':'· a moment ·',
+  'HAS CAÍDO':'YOU HAVE FALLEN', '«No fueron derrotados del todo. Aún.»':'“They were not wholly defeated. Not yet.”',
+  'EL FALSO SOL HA CAÍDO':'THE FALSE SUN HAS FALLEN',
+  'Primer pasaje del Popol Vuh · demo jugable':'First passage of the Popol Vuh · playable demo',
+  'Relato':'Story', 'Popol Vuh · libro del consejo k’iche’':'Popol Vuh · the K’iche’ book of counsel',
+  'Arte, escenografías y música':'Art, backgrounds and music', 'proyecto Popol Vuh':'the Popol Vuh project',
+  'Primer enemigo derrotado':'First foe defeated', 'Vucub Caquix, el Siete Guacamayo':'Vucub Caquix, Seven Macaw',
+  'Nombres en inglés':'Names in English', 'según la traducción de Allen J. Christenson':'after the translation by Allen J. Christenson',
+  'Continuar':'Continue', 'Volver al último brasero':'Back to the last brazier', 'Salir a la portada':'Quit to title',
+  'Volver al brasero de copal':'Return to the copal brazier',
+  'Jugar de nuevo':'Play again', 'Ver la apertura':'Watch the opening', 'Volver a la portada':'Back to title',
+};
+const FALTAN=new Set();
+function tr(s){
+  if(LANG!=='en' || s==null || s==='' || /^[\d\s.,?]+$/.test(s)) return s;
+  const v=EN[s];
+  if(v!=null) return v;
+  if(VERSION==='dev' && !FALTAN.has(s)){ FALTAN.add(s); console.warn('[en] falta traducción:', s); }
+  return s;
+}
+/* lo que no se dibuja en el lienzo: título, pantalla de carga y botones táctiles */
+function aplicaIdioma(){
+  document.documentElement.lang=LANG;
+  document.title=tr('Popol Vuh · Junajpú y el falso sol');
+  const sub=document.querySelector('#load .sub'); if(sub) sub.textContent=tr('Junajpú y el falso sol');
+  const pct=document.getElementById('pct');
+  if(pct && /LIBRO|BOOK/.test(pct.textContent)) pct.textContent=tr('ABRIENDO EL LIBRO…');
+  const nom={duck:'Agach.', shoot:'Tiro', jump:'Salto', golpe:'Golpe'};
+  document.querySelectorAll('.tb').forEach(b=>{ const k=nom[b.dataset.vk]; if(k) b.textContent=tr(k); });
+  const bf=document.getElementById('bFull'), bp=document.getElementById('bPausa');
+  if(bf) bf.setAttribute('aria-label',tr('Pantalla completa'));
+  if(bp) bp.setAttribute('aria-label',tr('Pausa'));
+}
+function cambiaIdioma(){
+  LANG = LANG==='en'? 'es' : 'en';
+  try{ localStorage.setItem('pv_lang',LANG); }catch(_){}
+  aplicaIdioma(); evento('idioma',{idioma:LANG});
+}
+aplicaIdioma();
 
 /* ================= ANCLAJE DE CUADROS =================
    Las hojas de sprites no comparten lienzo. Aquí se guarda, por cuadro, dónde
@@ -291,6 +519,18 @@ anchorSet('hun_down',255,{1:[0.4867,0.9796], 2:[0.456,0.9837], 3:[0.4597,0.9791]
    pierna (la tapa la seda), así que se iguala por la CARA A LOS PIES: 309 px a
    ref 360 en el perfil normal y 391 px aquí → ref 456. */
 anchorSet('hun_red',456,{1:[0.5656,0.9932], 2:[0.6286,0.9906]});
+/* Golpe cuerpo a cuerpo con el puñal de pedernal: hoja «Hunapu Close Range Attack»
+   (28 sept. 2026). Filas: prep = guardia (5) · atka = estocada · atkb = corte
+   horizontal · atkc = corte ascendente (5 cada una) · rec = recuperación (6). Las
+   etiquetas van a la IZQUIERDA de cada fila, así que se recortó con
+   _recortar_hoja_lateral.py. Escala por la pierna en la fila de pie (rec): 85 px →
+   ref 210. En guardia abierta la pierna mide menos, pero es la misma hoja. */
+anchorSet('hun_',210,{
+  prep1:[0.4917,0.9778], prep2:[0.4727,0.9779], prep3:[0.5043,0.978], prep4:[0.5161,0.9834], prep5:[0.4962,0.9834],
+  atka1:[0.5202,0.9825], atka2:[0.3568,0.9817], atka3:[0.3667,0.976], atka4:[0.4266,0.9767], atka5:[0.4865,0.9827],
+  atkb1:[0.5164,0.9769], atkb2:[0.4497,0.982], atkb3:[0.3426,0.9766], atkb4:[0.3585,0.977], atkb5:[0.4921,0.9826],
+  atkc1:[0.569,0.9805], atkc2:[0.411,0.9752], atkc3:[0.3646,0.9816], atkc4:[0.5159,0.9755], atkc5:[0.544,0.9819],
+  rec1:[0.4804,0.9828], rec2:[0.4409,0.983], rec3:[0.4388,0.9827], rec4:[0.4353,0.9831], rec5:[0.4118,0.983], rec6:[0.4348,0.9831] });
 anchorSet('esq_',365,{
   walk1:[0.4257,0.9918], walk2:[0.5006,0.9918], walk3:[0.478,0.9918], walk4:[0.4801,0.9945],
   walk5:[0.5164,0.989], walk6:[0.5038,0.9918], wind:[0.5465,0.9945], atk:[0.264,0.9945],
@@ -414,6 +654,8 @@ const OPT={}, OPT_SRC={ sh1:'hun_shoot1', sh2:'hun_shoot2', sh3:'hun_shoot3',
   red1:'hun_red1', red2:'hun_red2',
   dart:'dardo' };
 for(let i=1;i<=18;i++){ OPT_SRC['up'+i]='hun_up'+i; OPT_SRC['dn'+i]='hun_down'+i; }
+['prep','atka','atkb','atkc'].forEach(k=>{ for(let i=1;i<=5;i++) OPT_SRC[k+i]='hun_'+k+i; });
+for(let i=1;i<=6;i++) OPT_SRC['rec'+i]='hun_rec'+i;
 Object.entries(ART_SRC).forEach(([k,f])=>{ ART[k]=loadImg(f,()=>{artFail=true;}); });
 Object.entries(OPT_SRC).forEach(([k,f])=>{ OPT[k]=loadImg(f,null); });
 const ok=im=>!!(im&&im.complete&&im.naturalWidth>0);
@@ -453,7 +695,7 @@ const anim=(k,tt,fps,once)=>{
   return FOE[k+(i+1)];
 };
 const EH={ ara:105, ala:106, tec:95 };
-const GIRO_T=0.85;   // lo que tarda el alacrán en girarse = ventana para la espalda
+const GIRO_T=0.7;    // lo que tarda el alacrán en girarse = ventana para la espalda (era .85)
 
 /* --- Vucub Caquix --- */
 /* Cuadros de cada ciclo, en el orden de la hoja. El 6 de «volar a la izquierda»
@@ -603,7 +845,15 @@ const SFX={
   pagina:()=>{ puff({f0:3200,f1:900,d:.19,v:.12,q:.6}); },
   tela:()=>{ puff({f0:1500,f1:300,d:.26,v:.20,q:.5}); tone({type:'sine',f0:260,f1:90,d:.22,v:.12}); },
   triunfo:()=>{ [523,659,784,1047,1319].forEach((f,i)=>tone({type:'triangle',f0:f,d:1.1,v:.14,delay:i*.13,atk:.04})); },
-  derrota:()=>{ [440,392,330,262].forEach((f,i)=>tone({type:'sine',f0:f,d:.9,v:.16,delay:i*.17,atk:.03})); }
+  derrota:()=>{ [440,392,330,262].forEach((f,i)=>tone({type:'sine',f0:f,d:.9,v:.16,delay:i*.17,atk:.03})); },
+  /* el puñal: el tajo corta el aire; «corta» es cuando encuentra carne o hueso */
+  tajo:(k)=>{ puff({f0:3400-(k||0)*300,f1:900,d:.13,v:.17,q:.9}); },
+  corta:(fuerte)=>{ tone({type:'square',f0:fuerte?300:240,f1:90,d:fuerte?.16:.10,v:fuerte?.13:.09});
+                    puff({f0:1500,f1:300,d:fuerte?.2:.12,v:fuerte?.24:.17,q:.8}); },
+  /* dardo cargado a tope: un soplo más grave y largo */
+  soploPleno:()=>{ puff({f0:1800,f1:420,d:.26,v:.26,q:.7}); tone({type:'triangle',f0:620,f1:210,d:.2,v:.12}); },
+  /* la casa de los escribas llama la primera vez que asoma: tres notas de madera */
+  llamada:()=>{ [659,784,988].forEach((f,i)=>tone({type:'triangle',f0:f,d:.55,v:.09,delay:i*.14,atk:.02})); }
 };
 
 /* ================= ANALÍTICA =================
@@ -627,7 +877,7 @@ function congela(s){ hitStop=Math.max(hitStop,s); }   // micro-pausa de impacto
 /* ================= ENTRADA ================= */
 /* vk = mandos virtuales táctiles. ax es ANALÓGICO (-1..1): el joystick inclinado
    a medias camina, a fondo corre. up/dn apuntan la cerbatana. */
-const keys={}, vk={ax:0,up:0,dn:0,jump:0,shoot:0,duck:0};
+const keys={}, vk={ax:0,up:0,dn:0,jump:0,shoot:0,duck:0,golpe:0};
 let anyKey=false;                       // para las pantallas de "pulsa una tecla"
 const PREV_DEF=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape','KeyM','Tab'];
 addEventListener('keydown',e=>{
@@ -648,10 +898,13 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden&&SCREEN===
 /* Teclado. Apuntar arriba/abajo necesitaba ↑/W y ↓/S, que antes eran saltar y
    agacharse: con los dos significados a la vez, «mantén ↑ y dispara» hacía saltar
    y «mantén ↓ y dispara» agachaba. Por eso el salto pasa a ESPACIO/Z y agacharse a
-   C/L. Así hay dos manos cómodas: WASD + ESPACIO + K/L, o flechas + Z/X/C. */
+   C/L. Así hay dos manos cómodas: WASD + ESPACIO + K/L, o flechas + Z/X/C.
+   El golpe con el puñal (28 sept. 2026) se queda la J, que era un duplicado de la
+   cerbatana, y la V para la mano de las flechas: J·K·L y Z·X·C·V quedan en fila. */
 const L=()=>keys.KeyA||keys.ArrowLeft, R=()=>keys.KeyD||keys.ArrowRight,
       JUMP=()=>keys.Space||keys.KeyZ||vk.jump,
-      SHOOT=()=>keys.KeyK||keys.KeyJ||keys.KeyX||vk.shoot,
+      SHOOT=()=>keys.KeyK||keys.KeyX||vk.shoot,
+      MELEE=()=>keys.KeyJ||keys.KeyV||vk.golpe,
       DUCK=()=>keys.KeyC||keys.KeyL||vk.duck,
       AIM_UP=()=>keys.KeyW||keys.ArrowUp||vk.up,
       AIM_DN=()=>keys.KeyS||keys.ArrowDown||vk.dn,
@@ -753,12 +1006,13 @@ const t={ x:400, y:GROUND, vx:0, vy:0, face:1, onGround:true,
   jumpsLeft:1, jumpHeld:false, run:0, animT:0, duck:false,
   hp:VIDA_MAX, hurtT:0, inv:0, charging:false, charge:0, dartCd:0,
   coyote:0, jbuf:0, squash:0, stretch:0, muerto:false, muerteT:0,
-  aim:'frente', shotAim:'frente', web:0, webF:0, webLucha:false };
+  aim:'frente', shotAim:'frente', web:0, webF:0, webLucha:false,
+  golpe:0, golpeT:0, golpeQ:false, golpeRec:0, golpeN:0, golpeHeld:false, guardia:0, golpeHit:null };
 const darts=[], parts=[], feathers=[], telas=[];
 let avisoTela=false;                  // el aviso de «forcejea» sólo la primera vez
 let foes=[], boss=null;
 let notice={txt:'',t:0};
-function say(txt,d){ notice={txt,t:d||2.2}; }
+function say(txt,d){ notice={txt:tr(txt),t:d||2.2}; }
 
 /* Avisos de aprendizaje: cada uno se enseña UNA vez, cuando toca. `tap` es el
    mismo aviso para quien juega con los dedos: en el teléfono no hay barra
@@ -766,8 +1020,16 @@ function say(txt,d){ notice={txt,t:d||2.2}; }
 const PISTAS=[
   {id:'mover',  txt:'A · D  o  ← →   para andar', tap:'mueve el joystick para andar', cond:()=>true, wait:1.2, dur:4},
   {id:'salto',  txt:'ESPACIO  para saltar',       tap:'toca  SALTO  para saltar', cond:()=>t.x>620, dur:3.6},
-  {id:'tiro',   txt:'MANTÉN K  y suelta:  cerbatana', tap:'MANTÉN  TIRO  y suelta:  cerbatana',
-   cond:()=>foes.some(e=>e.hp>0&&Math.abs(e.x-t.x)<520), dur:4},
+  /* la PRIMERA casa de enigmas no se puede pasar de largo: se anuncia con cartel */
+  {id:'casa',   txt:'una CASA DE LOS ESCRIBAS:  ponte en la puerta y pulsa E',
+   tap:'una CASA DE LOS ESCRIBAS:  ponte en la puerta y toca la pantalla',
+   cond:()=>t.x>CASA.x-760, skip:()=>sala.resuelto||t.x>CASA.x+150, dur:4.5},
+  {id:'tiro',   txt:'MANTÉN K  y suelta:  cerbatana — cuanto más cargas, más duele',
+   tap:'MANTÉN  TIRO  y suelta:  cerbatana — cuanto más cargas, más duele',
+   cond:()=>foes.some(e=>e.hp>0&&Math.abs(e.x-t.x)<520), dur:4.2},
+  {id:'golpe',  txt:'J  para el puñal:  pulsa tres veces seguidas y encadenas tres golpes',
+   tap:'GOLPE  para el puñal:  tócalo tres veces seguidas y encadenas tres golpes',
+   cond:()=>foes.some(e=>e.hp>0&&Math.abs(e.x-t.x)<300), dur:4.5},
   /* el tecolote vigila desde lo alto: es el primer blanco que pide disparar hacia arriba */
   {id:'arriba', txt:'mantén  W  o  ↑  y dispara:  la cerbatana apunta hacia arriba',
    tap:'joystick ARRIBA + TIRO:  dispara hacia arriba',
@@ -785,31 +1047,46 @@ function updPistas(dt){
      (el del claro del nance se perdía justo al cruzar la niebla) */
   if(notice.t>1.5) return;
   const p=PISTAS[pistaI];
+  /* una pista que ya no viene a cuento (la casa quedó atrás) se salta: si no,
+     tapaba todas las que van detrás en la cola */
+  if(p.skip && p.skip()){ pistaI++; pistaT=0; return; }
   if(p.cond()){ pistaT+=dt;
     if(pistaT>=(p.wait||0)){ say(textoPista(p),p.dur); pistaI++; pistaT=0; } }
 }
 
 /* ================= ENEMIGOS ================= */
-const mkEsq=x=>({kind:'esq',x,baseX:x,y:GROUND,face:-1,hp:60,maxhp:60,state:'patrol',
-  t:Math.random()*6,vx:0,hitCd:0,atkT:0,wt:0,deadT:0});
+/* MÁS DUROS (28 sept. 2026): «se esquivan con demasiada facilidad». Suben un poco
+   de vida (esq 60→75, ara 45→55, ala 80→100, tec 35→40) y, sobre todo, ganan
+   movimientos que no se esquivan quedándose quieto ni retrocediendo:
+   · el esqueleto EMBISTE desde media distancia (retroceder ya no basta: hay que saltarlo);
+   · la araña escupe ADELANTANDO tu carrera, más rápido y más a menudo;
+   · el alacrán se gira antes, pica antes y avanza con el escudo por delante;
+   · el tecolote ya no sólo grita: se lanza en PICADO contra ti. */
+const mkEsq=x=>({kind:'esq',x,baseX:x,y:GROUND,face:-1,hp:75,maxhp:75,state:'patrol',
+  t:Math.random()*6,vx:0,hitCd:0,atkT:0,wt:0,deadT:0,dashCd:1+Math.random()*1.5,dashHit:false});
 const araHangY=a=>a+Math.min(150,(GROUND-a)*.55);
 const mkAra=(x,anchorY)=>({kind:'ara',x,baseX:x,anchorY,y:araHangY(anchorY),face:-1,
-  hp:45,maxhp:45,state:'hang',t:Math.random()*4,vx:0,hitCd:0,wt:0,cool:0,
-  escupeCd:1.5+Math.random()*2,deadT:0});
-const mkAla=x=>({kind:'ala',x,baseX:x,y:GROUND,face:-1,hp:80,maxhp:80,state:'patrol',
+  hp:55,maxhp:55,state:'hang',t:Math.random()*4,vx:0,hitCd:0,wt:0,cool:0,
+  escupeCd:1.2+Math.random()*1.5,deadT:0});
+const mkAla=x=>({kind:'ala',x,baseX:x,y:GROUND,face:-1,hp:100,maxhp:100,state:'patrol',
   t:Math.random()*5,vx:0,hitCd:0,wt:0,cool:0,turn:0,blockT:0,turnTo:-1,hitDone:false,deadT:0});
-const mkTec=(x,perchY)=>({kind:'tec',x,baseX:x,perchY,y:perchY,face:-1,hp:35,maxhp:35,
-  state:'perch',t:Math.random()*4,vx:0,vy:0,hitCd:0,wt:0,cool:0,calls:0,deadT:0});
+const mkTec=(x,perchY)=>({kind:'tec',x,baseX:x,perchY,y:perchY,face:-1,hp:40,maxhp:40,
+  state:'perch',t:Math.random()*4,vx:0,vy:0,hitCd:0,wt:0,cool:0,calls:0,deadT:0,
+  picadoCd:1.5,pvx:0,pvy:0,pT:0,picoHit:false});
+const ALA_PICA=.6;                    // lo que dura el aguijonazo (era .72): el golpe cae a .45 s
 
 function lanzaTela(e){
-  const ox=e.x+e.face*16, oy=e.y-EH.ara*.45;
-  const dx=t.x-ox, dy=(t.y-46)-oy, m=Math.hypot(dx,dy)||1;
-  telas.push({x:ox,y:oy,vx:dx/m*340,vy:dy/m*340-50,life:2.4,rot:0});
+  const ox=e.x+e.face*16, oy=e.y-EH.ara*.45, v=410;
+  /* apunta a donde VAS a estar: correr en línea recta ya no la esquiva */
+  const d0=Math.hypot(t.x-ox,(t.y-46)-oy)||1;
+  const dx=t.x+t.vx*(d0/v)*.8-ox, dy=(t.y-46)-oy, m=Math.hypot(dx,dy)||1;
+  telas.push({x:ox,y:oy,vx:dx/m*v,vy:dy/m*v-50,life:2.4,rot:0});
   SFX.tela();
 }
+const TELA_DURA=3;                    // segundos enredado si no forcejeas
 function enredar(){
   if(t.web>0||t.muerto) return;
-  t.web=1.5; t.webF=0; t.webLucha=false; burst(t.x,t.y-50,BONE,10); SFX.tela(); sacude(5,.2);
+  t.web=TELA_DURA; t.webF=0; t.webLucha=false; burst(t.x,t.y-50,BONE,10); SFX.tela(); sacude(5,.2);
   if(!avisoTela){ avisoTela=true; say('¡telaraña!  muévete para zafarte',2.4); }
 }
 function spawnFoes(){
@@ -851,15 +1128,22 @@ const DANO_PICADO=2, DANO_PLUMA=1;
    · a media vida (furia): el primer picado es un AMAGO que roza el suelo y remonta
      (el roce quita UN corazón: si no, un solo error costaba los cuatro), la ráfaga se
      abre en abanico y al estrellarse levanta dos ondas de tierra.
-   Cada valor va en pareja [normal, furia]. */
-const MOV={ hover:[1.15,.8], aim:[.5,.36], dive:[600,690], pluma:[460,500],
-            barrido:[560,640], onda:[0,320] };
+   Cada valor va en pareja [normal, furia].
+   28 sept. 2026, otra vuelta de tuerca («se esquiva con demasiada facilidad»): planea
+   y apunta menos rato, pica y barre más rápido, la ráfaga trae CUATRO plumas (la
+   última en abanico también sin furia) y las ondas corren más. A cambio de que ahora
+   los dardos cargados y el puñal pegan más, la vida sube de 300 a 400; lo que quita
+   cada golpe suyo no cambia. */
+const MOV={ hover:[.95,.68], aim:[.44,.32], dive:[680,780], pluma:[520,570],
+            barrido:[630,710], onda:[0,380] };
+const VIDA_JEFE=400;
 const ADELANTO=.55;                 // ≈ lo que tarda el picado en llegar: al que corre recto lo alcanza
 const mv=k=>MOV[k][boss.furia?1:0];
+const GUST_T=1.0, GUST_N=4;         // la ráfaga: cuánto dura y cuántas plumas suelta
 const ondas=[];
 let avisoBarrido=false;
 function spawnBoss(){
-  boss={x:BOSSX,y:CANOPY_Y,vx:0,vy:0,face:-1,hp:300,maxhp:300,
+  boss={x:BOSSX,y:CANOPY_Y,vx:0,vy:0,face:-1,hp:VIDA_JEFE,maxhp:VIDA_JEFE,
         state:'canopy',t:0,st:0,wt:1.6,active:false,hitCd:0,next:'dive',
         dead:false,deadT:0,tx:0,ty:0,gustN:0,fightT:0,
         acoso:'barrido', amago:false, dir:1, sx0:0, sy0:0, vxd:0, vyd:0};
@@ -885,7 +1169,7 @@ function bossSigue(){
   }
   boss.next='dive';
   boss.acoso = boss.acoso==='rafaga'? 'barrido' : 'rafaga';
-  if(boss.acoso==='rafaga'){ bossGo('gust',.9); boss.gustN=0; return; }
+  if(boss.acoso==='rafaga'){ bossGo('gust',GUST_T); boss.gustN=0; return; }
   /* barre desde el filo del lado donde ya está, hacia el otro */
   boss.dir = boss.x<(ARENA_L+ARENA_R)/2? 1 : -1;
   bossGo('prebarrido',.75); SFX.grito();
@@ -978,13 +1262,14 @@ function updBoss(dt){
     case 'gust': {                                      // ráfaga de plumas
       boss.face=Math.sign(t.x-boss.x)||boss.face; boss.wt-=dt;
       boss.x-=boss.face*22*dt;                          // cada soplo lo echa atrás
-      if(boss.gustN<3 && boss.wt<.9-.22*(boss.gustN+1)){
+      if(boss.gustN<GUST_N && boss.wt<GUST_T-.2*(boss.gustN+1)){
         boss.gustN++;
         const v=mv('pluma'), ox=boss.x+boss.face*30, oy=boss.y,
               ty=t.y-50, dist=Math.hypot(t.x-ox,ty-oy),
-              a0=Math.atan2(ty-oy, t.x+t.vx*(dist/v)*.6-ox);    // adelanta tu carrera
-        /* en furia, las dos últimas plumas salen en abanico de tres */
-        (boss.furia&&boss.gustN>1? [-.2,0,.2] : [0]).forEach(da=>
+              a0=Math.atan2(ty-oy, t.x+t.vx*(dist/v)*.75-ox);   // adelanta tu carrera
+        /* la última pluma sale en abanico de tres; en furia, las dos últimas */
+        const abanico = boss.gustN===GUST_N || (boss.furia && boss.gustN>=GUST_N-1);
+        (abanico? [-.2,0,.2] : [0]).forEach(da=>
           feathers.push({x:ox,y:oy,vx:Math.cos(a0+da)*v,vy:Math.sin(a0+da)*v,life:2.2}));
         SFX.clavo();
       }
@@ -1033,21 +1318,30 @@ function bossDartHit(dd){
   const B=bossBox();
   if(Math.abs(dd.x-boss.x)>B.hw || Math.abs(dd.y-B.cy)>B.hh) return;
   dd.life=0;
+  /* Daño subido (era 26 y 9): con los valores viejos hacían falta demasiados ciclos
+     y la pelea se hacía larguísima antes de llegar a la cinemática. Desde el 28 sept.
+     se multiplica por la CARGA del soplo (hasta ×2,25 a carga plena). */
+  const f=dd.fuerza||1;
+  bossRecibe(dd.x,dd.y, 38*f, 13*f, 60+40*(f-1)/1.25, f>=2);
+}
+/* Cualquier golpe al jefe (dardo o puñal). Mientras come en el suelo sin haber
+   empezado la pelea, el primer golpe es la EMBOSCADA; en el aire, rebota. */
+function bossRecibe(x,y,danoVuln,danoAire,danoEmboscada,fuerte){
+  const B=bossBox();
   const vuln = boss.state==='eat'||boss.state==='stun';
   if(!boss.active){
-    if(vuln){ boss.active=true; boss.hp-=60; boss.hitCd=.25; bossGo('rise');
+    if(vuln){ boss.active=true; boss.hp-=Math.round(danoEmboscada); boss.hitCd=.25; bossGo('rise');
       evento('jefe_emboscado');
-      t.hp=VIDA_MAX;                       // la pelea empieza con las cuentas llenas
+      /* La vida NO se rellena: Junajpú llega a la pelea con las cuentas que traiga
+         de la selva (antes se llenaban al entrar al claro y al emboscarlo). */
       say('¡EMBOSCADA! El falso sol chilla de rabia',3);
       burst(boss.x,B.cy,RED,16); SFX.jefe(); sacude(14,.5); congela(.09);
-    } else { burst(dd.x,dd.y,PAPER2,3); SFX.rebote(); }
+    } else { burst(x,y,PAPER2,3); SFX.rebote(); }
     return;
   }
-  /* Daño subido (era 26 y 9): con los valores viejos hacían falta demasiados ciclos
-     y la pelea se hacía larguísima antes de llegar a la cinemática. */
-  boss.hp-= vuln? 38 : 13;
-  boss.hitCd=.15; burst(dd.x,dd.y,RED,5); SFX.jefeHit();
-  if(vuln){ sacude(7,.2); congela(.05); }
+  boss.hp-= Math.round(vuln? danoVuln : danoAire);
+  boss.hitCd=.15; burst(x,y,RED,fuerte?10:5); SFX.jefeHit();
+  if(vuln||fuerte){ sacude(fuerte?11:7,.22); congela(fuerte?.08:.05); }
   if(boss.hp<=0){ bossCae(); return; }
   /* a media vida chilla y aprieta: sin reloj, el aviso es lo que marca el tramo */
   if(!boss.furia && boss.hp<=boss.maxhp*0.5){ boss.furia=true;
@@ -1087,7 +1381,8 @@ function entrarArena(){
   enArena=true; gate.flash=2.2;
   volverA=t.x;                                  // por dónde se volvió a la selva
   t.x=ARENA_L+120; t.y=GROUND; t.vx=0; t.vy=0; t.onGround=true; t.face=1;
-  t.inv=1.2; t.hp=VIDA_MAX; t.web=0; telas.length=0; darts.length=0;
+  /* se entra con la vida que se traiga: la pelea ya no rellena las cuentas */
+  t.inv=1.2; t.web=0; telas.length=0; darts.length=0; golpeCorta();
   checkpoint=GATE_X-120;                        // si todo acaba, se vuelve a la selva
   spawnBoss(); boss.wt=1.2;
   say('EL CLARO DEL NANCE · derríbalo: su picado vale dos corazones',3.8);
@@ -1116,9 +1411,9 @@ function drawCamino(cam){
     const by=GROUND-200;
     cx.save(); cx.textAlign='center';
     cx.globalAlpha=.55+.45*Math.sin(gate.t*4.5); cx.font='700 17px Georgia';
-    inkText(TOUCH?'TOCA LA PANTALLA PARA SEGUIR EL CAMINO':'E  ·  SEGUIR EL CAMINO', px, by, RED);
+    inkText(tr(TOUCH?'TOCA LA PANTALLA PARA SEGUIR EL CAMINO':'E  ·  SEGUIR EL CAMINO'), px, by, RED);
     cx.globalAlpha=1; cx.font='13px Georgia';
-    inkText('el falso sol come al final del sendero', px, by+22, INK, null, 3);
+    inkText(tr('el falso sol come al final del sendero'), px, by+22, INK, null, 3);
     cx.restore();
   }
 }
@@ -1147,15 +1442,24 @@ function updFoes(dt){
     if(e.hp<=0){ e.deadT+=dt; return; }
     const d=t.x-e.x, ad=Math.abs(d);
     if(e.kind==='esq'){
-      e.atkT=Math.max(0,e.atkT-dt);
+      e.atkT=Math.max(0,e.atkT-dt); e.dashCd=Math.max(0,e.dashCd-dt);
       if(e.state==='windup'){ e.wt-=dt;
         if(e.wt<=0){ e.state='stab'; e.wt=.32;
-          if(ad<95 && aLaAltura(e)) hurt(e.x); } }
-      else if(e.state==='stab'){ e.wt-=dt; e.x+=e.face*230*dt;
-        if(e.wt<=0){ e.state='chase'; e.atkT=.9; } }
-      else if(ad<380){ e.state='chase'; e.face=Math.sign(d)||1;
-        if(ad>66) e.x+=e.face*205*dt;
-        else if(e.atkT<=0){ e.state='windup'; e.wt=.5; } }
+          if(ad<110 && aLaAltura(e)) hurt(e.x); } }
+      else if(e.state==='stab'){ e.wt-=dt; e.x+=e.face*290*dt;
+        if(e.wt<=0){ e.state='chase'; e.atkT=.7; } }
+      /* EMBESTIDA: se agacha (el «!» avisa), y se lanza a ras de suelo cruzando media
+         pantalla. Alejarse no sirve: se salta por encima o se le corta con el puñal. */
+      else if(e.state==='dashwind'){ e.wt-=dt; e.face=Math.sign(d)||e.face;
+        if(e.wt<=0){ e.state='dash'; e.wt=.36; e.dashHit=false; SFX.tajo(2); } }
+      else if(e.state==='dash'){ e.wt-=dt; e.x+=e.face*600*dt;
+        if(Math.random()<.5) burst(e.x-e.face*20,GROUND-2,PAPER2,1);
+        if(!e.dashHit && Math.abs(t.x-e.x)<48 && aLaAltura(e)){ e.dashHit=true; hurt(e.x); }
+        if(e.wt<=0){ e.state='chase'; e.atkT=.5; e.dashCd=2.6+Math.random()*1.4; } }
+      else if(ad<400){ e.state='chase'; e.face=Math.sign(d)||1;
+        if(ad>150 && ad<330 && e.dashCd<=0){ e.state='dashwind'; e.wt=.42; }
+        else if(ad>66) e.x+=e.face*225*dt;
+        else if(e.atkT<=0){ e.state='windup'; e.wt=.38; } }
       else { e.state='patrol';
         e.x+=(Math.sin(e.t*.7)>0?60:-60)*dt; e.face=Math.sin(e.t*.7)>0?1:-1;
         e.x=Math.max(e.baseX-130,Math.min(e.baseX+130,e.x)); }
@@ -1167,22 +1471,22 @@ function updFoes(dt){
          lejos y obliga a moverse, no sólo a esperarla. */
       e.cool=Math.max(0,e.cool-dt); e.escupeCd=Math.max(0,e.escupeCd-dt);
       if(e.state==='spit'){ e.wt-=dt; e.face=Math.sign(d)||e.face;
-        if(e.wt<=0){ lanzaTela(e); e.escupeCd=3.4+Math.random(); e.cool=.7;
+        if(e.wt<=0){ lanzaTela(e); e.escupeCd=2.5+Math.random()*.8; e.cool=.6;
           e.state = e.y<GROUND-2? 'hang' : 'chase'; } }
       else if(e.state==='hang'){ e.y=araHangY(e.anchorY); e.face=Math.sign(d)||1;
-        if(ad<230 && e.cool<=0){ e.state='drop'; e.wt=0; }
-        else if(ad<520 && e.escupeCd<=0 && t.web<=0){ e.state='spit'; e.wt=.5; } }
-      else if(e.state==='drop'){ e.y+=430*dt; e.face=Math.sign(d)||1;
+        if(ad<260 && e.cool<=0){ e.state='drop'; e.wt=0; }
+        else if(ad<540 && e.escupeCd<=0 && t.web<=0){ e.state='spit'; e.wt=.42; } }
+      else if(e.state==='drop'){ e.y+=480*dt; e.face=Math.sign(d)||1;
         if(e.y>=GROUND){ e.y=GROUND; e.state='chase'; e.wt=0; } }
       else if(e.state==='windup'){ e.wt-=dt; e.face=Math.sign(d)||e.face;
         if(e.wt<=0){ e.state='bite'; e.wt=.3;
-          if(ad<105 && aLaAltura(e)) hurt(e.x); } }
-      else if(e.state==='bite'){ e.wt-=dt; e.x+=e.face*260*dt;
-        if(e.wt<=0){ e.state='chase'; e.cool=.75; } }
+          if(ad<110 && aLaAltura(e)) hurt(e.x); } }
+      else if(e.state==='bite'){ e.wt-=dt; e.x+=e.face*290*dt;
+        if(e.wt<=0){ e.state='chase'; e.cool=.6; } }
       else { e.state='chase'; e.face=Math.sign(d)||1;
-        if(ad>150 && ad<440 && e.escupeCd<=0 && e.cool<=0 && t.web<=0){ e.state='spit'; e.wt=.5; }
-        else if(ad>72) e.x+=e.face*175*dt;
-        else if(e.cool<=0){ e.state='windup'; e.wt=.38; }
+        if(ad>150 && ad<460 && e.escupeCd<=0 && e.cool<=0 && t.web<=0){ e.state='spit'; e.wt=.42; }
+        else if(ad>72) e.x+=e.face*205*dt;
+        else if(e.cool<=0){ e.state='windup'; e.wt=.3; }
         if(ad>820) e.x+=(e.baseX-e.x)*.7*dt; }
       e.x+=e.vx*dt; e.vx*=.85;
     } else if(e.kind==='ala'){
@@ -1192,7 +1496,7 @@ function updFoes(dt){
       e.blockT=Math.max(0,e.blockT-dt);
       const want=Math.sign(d)||e.face;
       if(e.state==='turning'){ e.wt-=dt;
-        if(e.wt<=0){ e.face=e.turnTo; e.state='guard'; e.turn=1.0; e.cool=Math.max(e.cool,.25); } }
+        if(e.wt<=0){ e.face=e.turnTo; e.state='guard'; e.turn=.8; e.cool=Math.max(e.cool,.2); } }
       else if(want!==e.face && e.turn<=0 && e.state!=='sting'){
         e.state='turning'; e.wt=GIRO_T; e.turnTo=want;
         e.x+=(want>0?-1:1)*6; }
@@ -1200,12 +1504,12 @@ function updFoes(dt){
         if(e.wt<=.15 && !e.hitDone){ e.hitDone=true;
           /* el aguijón hace DOBLE daño: es el enemigo pesado del bioma y así
              obliga de verdad a rodearlo en vez de comerse el golpe */
-          if(ad<170 && Math.sign(d)===e.face && aLaAltura(e)) hurt(e.x,2); }
-        if(e.wt<=0){ e.state='guard'; e.cool=1.1; e.hitDone=false; } }
-      else if(ad<430){
-        if(ad<200 && e.cool<=0 && Math.sign(d)===e.face){ e.state='sting'; e.wt=.72; e.hitDone=false; }
+          if(ad<185 && Math.sign(d)===e.face && aLaAltura(e)) hurt(e.x,2); }
+        if(e.wt<=0){ e.state='guard'; e.cool=.85; e.hitDone=false; } }
+      else if(ad<450){
+        if(ad<215 && e.cool<=0 && Math.sign(d)===e.face){ e.state='sting'; e.wt=ALA_PICA; e.hitDone=false; }
         else { e.state='guard';
-          if(ad>150 && Math.sign(d)===e.face) e.x+=e.face*95*dt; } }
+          if(ad>140 && Math.sign(d)===e.face) e.x+=e.face*130*dt; } }
       else { e.state='patrol';
         e.x+=(Math.sin(e.t*.55)>0?52:-52)*dt;
         e.x=Math.max(e.baseX-160,Math.min(e.baseX+160,e.x)); }
@@ -1224,12 +1528,29 @@ function updFoes(dt){
             nf.state='chase'; nf.summoned=true; nuevos.push(nf);
             say('¡el tecolote llamó a un guardián!',1.6);
           }
-          e.state='fly'; e.wt=0; e.vy=-90;
+          e.state='fly'; e.wt=0; e.vy=-90; e.picadoCd=.9;
         } }
-      else { e.wt+=dt; e.face=Math.sign(d)||e.face;
+      /* PICADO: se encoge chillando (el «!»), se lanza hacia donde vas a estar y
+         remonta al rozar el suelo. La dirección se FIJA al lanzarse y adelanta tu
+         carrera: quedarse quieto o seguir recto no sirve; se esquiva dando la vuelta
+         o saltando en el último momento, y también se le corta en el aire con el puñal.
+         e.y son las patas: el cuerpo va ~44 px más arriba. */
+      else if(e.state==='picawind'){ e.pT-=dt; e.face=Math.sign(d)||e.face; e.y-=40*dt;
+        if(e.pT<=0){
+          const tx=t.x+t.vx*.35, ty=t.y-18, dx=tx-e.x, dy=ty-e.y, m=Math.hypot(dx,dy)||1;
+          e.pvx=dx/m*560; e.pvy=dy/m*560; e.state='picado'; e.pT=1.1; e.picoHit=false; SFX.grito(); } }
+      else if(e.state==='picado'){ e.pT-=dt;
+        e.x+=e.pvx*dt; e.y+=e.pvy*dt; e.face=Math.sign(e.pvx)||e.face;
+        const cy=e.y-44, pc=t.y-(t.duck?35:55), ph=t.duck?32:50;
+        if(!e.picoHit && t.inv<=0 && Math.abs(t.x-e.x)<40 && Math.abs(cy-pc)<ph+22){
+          e.picoHit=true; hurt(e.x); }
+        if(e.y>GROUND-6 && e.pvy>0){ e.y=GROUND-6; e.pvy=-Math.abs(e.pvy)*.8; e.picoHit=true; burst(e.x,GROUND-4,PAPER2,4); }
+        if(e.pT<=0 || e.y<e.perchY-220){ e.state='fly'; e.picadoCd=2.4+Math.random()*1.2; } }
+      else { e.wt+=dt; e.face=Math.sign(d)||e.face; e.picadoCd=Math.max(0,e.picadoCd-dt);
         const tx=e.baseX+Math.cos(e.wt*1.3)*220, ty=e.perchY-150+Math.sin(e.wt*2.1)*40;
         e.x+=(tx-e.x)*1.8*dt; e.y+=(ty-e.y)*2.0*dt;
-        if(e.wt>4.2 && Math.abs(e.x-e.baseX)<70){ e.state='perch'; e.cool=3.2; } }
+        if(e.picadoCd<=0 && ad<420 && ad>60 && !t.muerto){ e.state='picawind'; e.pT=.45; }
+        else if(e.wt>6 && Math.abs(e.x-e.baseX)<70){ e.state='perch'; e.cool=3.2; } }
     }
   });
   /* los guardianes recién llamados se añaden DESPUÉS del recorrido */
@@ -1272,12 +1593,28 @@ function updProyectiles(dt){
           say('el pedernal rebota — dispárale por la espalda',1.4);
           return;
         }
-        e.hp-=26; e.hitCd=.18; e.vx=Math.sign(dd.vx)*140; dd.life=0;
-        burst(dd.x,dd.y,RED,4); SFX.clavo();
-        if(e.hp<=0){ burst(e.x,B.cy,GOLDS,12); e.state='dead'; SFX.muere(); congela(.04); }
+        /* 26 con un soplo rápido; la carga lo multiplica hasta ×2,25 */
+        const f=dd.fuerza||1; dd.life=0;
+        dañaBicho(e, 26*f, Math.sign(dd.vx)||t.face, dd.x, dd.y, f>=2);
+        if(e.hp>0) SFX.clavo();
       }
     });
   });
+}
+/* Un golpe a un bicho, venga del dardo o del puñal. `fuerte` = dardo a carga plena
+   o el tercer golpe del combo: lo empuja lejos, sacude la cámara y congela un
+   instante, que es lo que hace que el golpe se SIENTA más fuerte. */
+function dañaBicho(e,dano,dir,hx,hy,fuerte){
+  const B=HITBOX(e);
+  e.hp-=Math.round(dano); e.hitCd=.18; e.vx=dir*(fuerte?330:140);
+  burst(hx,hy,RED,fuerte?9:4);
+  if(fuerte){ sacude(6,.16); congela(.05); burst(hx,hy,GOLDS,5); }
+  /* la araña colgada que recibe un golpe se suelta del hilo */
+  if(e.kind==='ara' && e.state==='hang' && e.hp>0){ e.state='drop'; e.cool=.4; }
+  /* el tecolote golpeado en pleno picado pierde el impulso */
+  if(e.kind==='tec' && (e.state==='picado'||e.state==='picawind') && e.hp>0){
+    e.state='fly'; e.picadoCd=2.2; }
+  if(e.hp<=0){ burst(e.x,B.cy,GOLDS,12); e.state='dead'; SFX.muere(); congela(fuerte?.08:.04); }
 }
 
 /* caja de golpe por especie */
@@ -1288,6 +1625,100 @@ function HITBOX(e){
   if(e.kind==='tec') return {cy:e.y-EH.tec*.46,hw:40,hh:EH.tec*.46};
   return {cy:e.y-60,hw:42,hh:58};
 }
+
+/* ================= EL PUÑAL · golpe cuerpo a cuerpo =================
+   Combo de tres con el puñal de pedernal: ESTOCADA → CORTE HORIZONTAL → CORTE
+   ASCENDENTE. Cada pulsación encadena el siguiente si llega mientras el anterior
+   aún suena (o justo al terminar); si no, Junajpú recupera la guardia.
+   · act: tramo del golpe en el que el filo corta (fracción de su duración).
+   · alc: alcance hacia delante desde el centro del cuerpo; alto: franja vertical.
+   · jefe: lo que le quita al falso sol cuando está en el suelo (en el aire, un 35 %).
+   · paso: el golpe avanza un poco, así el combo persigue a quien retrocede.
+   El filo también CORTA telarañas y plumas en el aire: es la defensa contra lo que
+   ahora te disparan adelantando tu carrera. Contra el alacrán, el pedernal de
+   delante lo para igual que a un dardo: por la espalda o mientras se gira. */
+const GOLPES=[
+  {k:'atka', dur:.30, act:[.25,.75], dano:22, jefe:16, alc:98,  alto:[-96,-30],  paso:170},
+  {k:'atkb', dur:.30, act:[.25,.75], dano:22, jefe:16, alc:104, alto:[-104,-24], paso:130},
+  {k:'atkc', dur:.40, act:[.20,.65], dano:36, jefe:26, alc:92,  alto:[-170,-8],  paso:90, fuerte:true},
+];
+const GOLPE_REC=.22, GOLPE_COLA=.14;        // recuperación · margen para encadenar tarde
+let avisoPedernal=false;
+function iniciaGolpe(n){
+  t.golpe=n; t.golpeT=0; t.golpeQ=false; t.golpeRec=0; t.guardia=0; t.golpeHit=new Set();
+  /* entre golpe y golpe se puede cambiar de lado */
+  const eje=(L()?-1:0)+(R()?1:0)||Math.sign(vk.ax);
+  if(eje) t.face=eje;
+  if(t.onGround) t.vx=t.face*GOLPES[n-1].paso;
+  SFX.tajo(n-1);
+}
+/* corta el combo en seco (daño, telaraña, cambio de pantalla) */
+function golpeCorta(){ t.golpe=0; t.golpeT=0; t.golpeQ=false; t.golpeRec=0; t.guardia=0; }
+function golpeCaja(G){
+  const x0=t.face>0? t.x-14 : t.x-G.alc, x1=t.face>0? t.x+G.alc : t.x+14;
+  return {x0,x1,y0:t.y+G.alto[0],y1:t.y+G.alto[1]};
+}
+const cajaToca=(c,x,y,hw,hh)=>x+hw>c.x0 && x-hw<c.x1 && y+hh>c.y0 && y-hh<c.y1;
+function golpeImpacto(G){
+  const c=golpeCaja(G), hit=t.golpeHit;
+  let toco=false, bloqueo=false;
+  /* tajos al aire: telarañas y plumas */
+  telas.forEach(w=>{ if(w.life>0 && cajaToca(c,w.x,w.y,14,14)){ w.life=0; burst(w.x,w.y,BONE,7); toco=true; } });
+  feathers.forEach(f=>{ if(f.life>0 && cajaToca(c,f.x,f.y,12,10)){ f.life=0; burst(f.x,f.y,JADE,5); SFX.rebote(); } });
+  if(enArena){
+    if(boss && !boss.dead && !hit.has(boss)){
+      const B=bossBox();
+      if(cajaToca(c,boss.x,B.cy,B.hw*.8,B.hh)){
+        hit.add(boss); toco=true;
+        bossRecibe((c.x0+c.x1)/2, t.y-60, G.jefe, G.jefe*.35, 60, !!G.fuerte);
+      }
+    }
+  } else foes.forEach(e=>{
+    if(e.hp<=0 || hit.has(e)) return;
+    const B=HITBOX(e);
+    if(!cajaToca(c,e.x,B.cy,B.hw*.8,B.hh)) return;
+    hit.add(e);
+    /* alacrán de frente: el pedernal para el filo y te echa atrás */
+    if(e.kind==='ala' && e.state!=='turning' && Math.sign(t.x-e.x)===e.face){
+      e.blockT=.3; burst(e.x+e.face*40,B.cy,GOLD,6); SFX.rebote(); bloqueo=true;
+      if(!avisoPedernal){ avisoPedernal=true; say('el pedernal para el puñal — rodéalo',1.6); }
+      return;
+    }
+    toco=true;
+    dañaBicho(e, G.dano, t.face, e.x-t.face*20, B.cy, !!G.fuerte);
+  });
+  if(bloqueo){ t.vx=-t.face*240; congela(.04); }
+  if(toco){ SFX.corta(!!G.fuerte); congela(G.fuerte?.07:.035); if(G.fuerte) sacude(5,.14); }
+}
+/* se llama desde control(): avanza el golpe en curso y lee la tecla */
+function updGolpe(dt,enredado){
+  const quiere=MELEE(), pulsa=quiere && !t.golpeHeld;
+  t.golpeHeld=quiere;
+  if(enredado || t.muerto){ golpeCorta(); return; }
+  if(pulsa){
+    if(t.charging){ t.charging=false; t.charge=0; slowmo=1; }   // el puñal cancela la carga
+    if(t.golpe>0){ if(t.golpe<3) t.golpeQ=true; }                 // machacar encadena siempre
+    else if(t.golpeRec>GOLPE_REC-GOLPE_COLA && t.golpeN<3) iniciaGolpe(t.golpeN+1);
+    else if(t.golpeRec>0) t.golpeQ=true;                          // en cuanto recupere, otro
+    else iniciaGolpe(1);
+  }
+  if(t.golpe>0){
+    const G=GOLPES[t.golpe-1];
+    t.golpeT+=dt;
+    const p=t.golpeT/G.dur;
+    if(p>=G.act[0] && p<=G.act[1]) golpeImpacto(G);
+    if(p>=1){
+      if(t.golpeQ && t.golpe<3) iniciaGolpe(t.golpe+1);
+      else { t.golpeN=t.golpe; t.golpe=0; t.golpeQ=false;
+             t.golpeRec=GOLPE_REC*(t.golpeN===3?1.5:1); }
+    }
+  } else if(t.golpeRec>0){
+    t.golpeRec-=dt;
+    if(t.golpeRec<=0){ t.golpeRec=0; t.guardia=1.6;
+      if(t.golpeQ){ t.golpeQ=false; iniciaGolpe(1); } }
+  } else if(t.guardia>0) t.guardia-=dt;
+}
+const golpeando=()=>t.golpe>0;
 
 /* ================================================================
    LA CASA DE LOS ESCRIBAS · sala de enigmas (PROTOTIPO)
@@ -1300,7 +1731,20 @@ function HITBOX(e){
    ================================================================ */
 /* x = centro de la PUERTA en el mundo. Medidas de la puerta sobre p_templo.png
    (499×341): de x 135 a 195 y de y 175 a 282; la base de los escalones al 94,4 %. */
-const CASA={ x:1790, H:310, puerta:{x0:135/499, x1:195/499, y0:175/341, y1:282/341}, piso:.944 };
+/* obvia: la PRIMERA casa (el tutorial de los enigmas) no se puede pasar de largo —
+   haz de luz desde el cielo, piedras encendidas que llevan a la puerta, cartucho con
+   el «?», aviso en el borde de la pantalla, una llamada al asomar, marca en la barra
+   de avance y un recordatorio si la dejas atrás. Las casas siguientes irán con
+   obvia:false: sólo la luz tenue del vano, para que encontrarlas sea parte del juego. */
+const CASA={ x:1790, H:310, puerta:{x0:135/499, x1:195/499, y0:175/341, y1:282/341}, piso:.944,
+             obvia:true };
+let casaVista=false, casaAtras=false;
+function updCasa(){
+  if(!CASA.obvia || sala.resuelto) return;
+  if(!casaVista && CASA.x-t.x < CVW*.62){ casaVista=true; SFX.llamada(); }
+  if(!casaAtras && t.x>CASA.x+460){ casaAtras=true;
+    say('la casa de los escribas quedó atrás:  dentro te espera un don',3.2); }
+}
 const poderes={ jade:false };
 const sala={ fase:'dialogo', pagina:0, t:0, paginas:[], resuelto:false, intentos:0 };
 const SALA_TEXTO={
@@ -1333,7 +1777,7 @@ function entrarSala(){
   if(!casaCerca()) return false;
   evento('sala_entrada',{ya_resuelta:sala.resuelto});
   SCREEN='sala'; sala.pagina=0; sala.t=0;
-  t.vx=0; t.charging=false; t.charge=0; slowmo=1; t.web=0;
+  t.vx=0; t.charging=false; t.charge=0; slowmo=1; t.web=0; golpeCorta();
   for(const k in keys) keys[k]=false;
   for(const k in vk) vk[k]=0;
   if(typeof joySuelta==='function') joySuelta();
@@ -1348,7 +1792,7 @@ function salirSala(){
   t.x=CASA.x; t.y=GROUND; t.vx=0; t.vy=0; t.onGround=true; t.inv=Math.max(t.inv,.8);
   if(sala.fase==='acierto') say('CUENTA DE JADE  ·  resistes un golpe más',3.2);
 }
-const salaTexto=()=>sala.paginas[sala.pagina]||'';
+const salaTexto=()=>tr(sala.paginas[sala.pagina]||'');
 const salaCompleto=()=>sala.t*LETRAS_POR_SEG >= salaTexto().length;
 function salaMenuVisible(){
   if(!salaCompleto()) return false;
@@ -1397,6 +1841,7 @@ function hurt(fromX,dano){
   const d=dano||1;
   t.inv=.95; t.hurtT=.35; t.hp-=d;
   if(t.charging){ t.charging=false; slowmo=1; t.charge=0; }
+  golpeCorta();                              // un golpe recibido corta el combo
   t.web=0;                                   // el golpe rompe la telaraña
   t.vx=Math.sign(t.x-fromX||-t.face)*(d>1?300:220); t.vy=-180; t.onGround=false;
   burst(t.x,t.y-60,RED,d>1?18:10); SFX.golpe();
@@ -1407,6 +1852,7 @@ function revive(){
   t.x=checkpoint; t.y=GROUND; t.vx=0; t.vy=0; t.onGround=true; t.face=1;
   t.hp=VIDA_MAX; t.inv=1.6; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
   t.muerto=false; t.muerteT=0; t.jumpsLeft=P.jmax; slowmo=1; paused=false; t.web=0;
+  golpeCorta();
   spawnFoes();
   if(enArena){ t.x=ARENA_L+120; spawnBoss(); boss.wt=1.2;
     say('el falso sol vuelve al nance… espera a que baje',3); }
@@ -1418,22 +1864,28 @@ function revive(){
    tiene que nacer ahí o se ve salir de la nada. Hacia abajo la cerbatana apunta
    ~58° por debajo de la horizontal, delante del cuerpo. */
 const PUNTA={ arriba:{dx:4, dy:-119}, abajo:{dx:22, dy:-32, ang:58*Math.PI/180} };
+/* LA CARGA PEGA MÁS (28 sept. 2026). Antes cargar sólo daba alcance y velocidad; el
+   daño era el mismo con un toque que con el soplo entero. Ahora el daño crece con la
+   carga: ×1 con un toque, ×2,25 a carga plena (0,8 s). El dardo pleno sale más
+   grueso, con estela de oro y un soplo más grave, y al clavarse empuja lejos. */
+const fuerzaCarga=c=>1+1.25*Math.max(0,Math.min(1,c));
 function shootDart(){
-  const v=880+320*t.charge, dir=t.aim;
+  const v=880+320*t.charge, dir=t.aim, fuerza=fuerzaCarga(t.charge);
   t.shotAim=dir;                          // lo usa el dibujo para rematar el soplido
+  const extra={life:.9, fuerza, carga:t.charge};
   if(dir==='arriba'){
-    darts.push({x:t.x+t.face*PUNTA.arriba.dx, y:t.y+PUNTA.arriba.dy, vx:0, vy:-v, life:.9});
+    darts.push({x:t.x+t.face*PUNTA.arriba.dx, y:t.y+PUNTA.arriba.dy, vx:0, vy:-v, ...extra});
   } else if(dir==='abajo'){
     const a=PUNTA.abajo.ang;
     darts.push({x:t.x+t.face*PUNTA.abajo.dx, y:t.y+PUNTA.abajo.dy,
-                vx:t.face*Math.cos(a)*v, vy:Math.sin(a)*v, life:.9});
+                vx:t.face*Math.cos(a)*v, vy:Math.sin(a)*v, ...extra});
   } else {
     /* de pie la boquilla queda a ~76 % de la altura del sprite; agachado baja a ras
        de suelo, para alcanzar de lejos a las arañas */
     const bajo=t.duck;
-    darts.push({x:t.x+t.face*(bajo?80:52), y:t.y-(bajo?P.duckDy:76), vx:t.face*v, vy:0, life:.9, bajo});
+    darts.push({x:t.x+t.face*(bajo?80:52), y:t.y-(bajo?P.duckDy:76), vx:t.face*v, vy:0, bajo, ...extra});
   }
-  SFX.soplo();
+  if(fuerza>=2){ SFX.soploPleno(); sacude(3,.1); } else SFX.soplo();
 }
 
 /* ================= CONTROL ================= */
@@ -1441,32 +1893,39 @@ function control(dt){
   const accel=t.onGround?P.accG:P.accA;
   /* Enredado en una telaraña: no anda ni salta, pero SÍ puede disparar — dejar al
      jugador totalmente inútil se siente injusto. Y moverse acorta el forcejeo:
-     de 1,5 s quieto a ~0,6 s si reaccionas. */
+     de 3 s quieto a ~1,5 s si reaccionas (28 sept. 2026: antes 1,5 s y ~0,6 s, y
+     el usuario pidió que durara más — se salía antes de sentir el peligro). */
   if(t.web>0){
     /* forcejeo: machacar cualquier mando acorta el encierro y acelera el vaivén del
        capullo, que es lo que le dice al jugador que sirve de algo apretar. */
     t.webLucha = !!(L()||R()||JUMP()||vk.ax||SHOOT());
-    t.web-=dt*(1+(t.webLucha?1.8:0));
+    t.web-=dt*(1+(t.webLucha?1:0));
     t.webF+=dt*(t.webLucha?7.5:2.8);
     if(t.web<=0){ t.web=0; t.webLucha=false;
       burst(t.x,t.y-50,BONE,10); burst(t.x,t.y-90,BONE,6); SFX.rebote(); }
   }
   const enredado=t.web>0;
   if(enredado){ t.charging=false; t.charge=0; slowmo=1; }   // con los brazos liados no sopla
-  t.duck = DUCK() && t.onGround && !enredado;
+  updGolpe(dt,enredado);
+  /* durante el tajo manda el golpe: no se anda, ni se salta, ni se sopla; en la
+     recuperación sí (saltar o disparar la cancelan, para que nunca se sienta pesado) */
+  const tajo=golpeando();
+  t.duck = DUCK() && t.onGround && !enredado && !tajo;
   /* hacia dónde apunta la cerbatana; agachado siempre dispara al frente, a ras de suelo */
   t.aim = t.duck? 'frente' : AIM_UP()? 'arriba' : AIM_DN()? 'abajo' : 'frente';
   /* eje de marcha: el teclado da -1/0/1; el joystick da un valor intermedio que
      limita la velocidad, así inclinado a medias Junajpú camina en vez de correr */
   let eje=0;
-  if(!t.charging && !enredado){ if(L())eje=-1; if(R())eje=1; if(vk.ax) eje=vk.ax; }
+  if(!t.charging && !enredado && !tajo){ if(L())eje=-1; if(R())eje=1; if(vk.ax) eje=vk.ax; }
   let intent=Math.sign(eje);
   const vmax=P.spd*Math.min(1,Math.abs(eje)||1);
   if(t.duck){ if(intent!==0 && !t.charging) t.face=intent;   // agachado se gira, no avanza
     intent=0; t.vx=0; }
   if(intent!==0){ t.face=intent; t.vx+=intent*accel*dt;
     t.vx=Math.max(-vmax,Math.min(vmax,t.vx));
-  } else t.vx*= t.onGround? ((t.charging||enredado)?.55:P.fric) : .96;
+  } else if(tajo && t.onGround) t.vx*=Math.pow(.004,dt);   // el paso del golpe se frena solo
+  else t.vx*= t.onGround? ((t.charging||enredado)?.55:P.fric) : .96;
+  if(Math.abs(t.vx)>40 || !t.onGround || t.aim!=='frente') t.guardia=0;
 
   // — salto (coyote time + buffer) —
   t.coyote=t.onGround? .1 : Math.max(0,t.coyote-dt);
@@ -1474,8 +1933,9 @@ function control(dt){
   const wantJump=JUMP();
   if(wantJump && !t.jumpHeld){ t.jbuf=.12; t.jumpHeld=true; }
   if(!wantJump) t.jumpHeld=false;
-  if(t.jbuf>0 && !t.charging && !t.duck && !enredado){
+  if(t.jbuf>0 && !t.charging && !t.duck && !enredado && !tajo){
     if(t.coyote>0 || t.jumpsLeft>0){
+      if(t.golpeRec>0){ t.golpeRec=0; t.golpeQ=false; }
       const first=t.coyote>0||t.jumpsLeft===P.jmax;
       t.vy = first? -P.jmp : -P.jmp*0.875;
       if(t.coyote<=0) t.jumpsLeft--; else t.jumpsLeft=P.jmax-1;
@@ -1486,7 +1946,9 @@ function control(dt){
 
   // — cerbatana: mantener para cargar, soltar para soplar —
   t.dartCd-=dt;
-  if(SHOOT() && t.dartCd<=0 && !enredado){
+  if(SHOOT() && t.dartCd<=0 && !enredado && !tajo){
+    if(t.golpeRec>0){ t.golpeRec=0; t.golpeQ=false; }
+    t.guardia=0;
     t.charging=true; t.charge=Math.min(1,t.charge+dt/0.8); slowmo=.45;
   } else if(t.charging){
     t.charging=false; slowmo=1; t.dartCd=.5; shootDart(); t.charge=0;
@@ -1801,7 +2263,8 @@ function cineType(lines,n){                 // revela n caracteres repartidos en
   let c=n; return lines.map(l=>{ const s=l.slice(0,Math.max(0,c)); c-=l.length; return s; });
 }
 function drawCine(){
-  const p=cine.seq[cine.i], tt=cine.t, B=cine.box;
+  const p0=cine.seq[cine.i], tt=cine.t, B=cine.box;
+  const p={...p0, n:tr(p0.n), q:tr(p0.q), w:tr(p0.w)};
   cx.fillStyle='#171008'; cx.fillRect(0,0,CVW,CVH);
   const openY=cine.prev<0? Math.min(1,tt/.45)**.6 : 1;
   if(cine.fade>0 && cine.prev>=0)
@@ -1819,7 +2282,7 @@ function drawCine(){
   let qh=0;
   if(p.q){
     cx.font='italic 20px Georgia';
-    const ql=wrap('«'+p.q+'»',740);
+    const ql=wrap(LANG==='en'? '“'+p.q+'”' : '«'+p.q+'»',740);
     qh=28+ql.length*24;
     const bw=Math.min(CVW-160,Math.max(...ql.map(l=>cx.measureText(l).width))+280);
     cx.fillStyle=BONE; cx.strokeStyle=INK; cx.lineWidth=3;
@@ -1843,7 +2306,7 @@ function drawCine(){
     cx.fillStyle=k===cine.i?GOLDS:'rgba(201,168,106,.42)'; cx.fill();
   }
   cx.fillStyle='rgba(201,168,106,.75)'; cx.font='12px Georgia';
-  cx.fillText('←  ·  → / ESPACIO  ·  ESC salta la escena   ('+(cine.i+1)+'/'+cine.seq.length+')',
+  cx.fillText(tr('←  ·  → / ESPACIO  ·  ESC salta la escena')+'   ('+(cine.i+1)+'/'+cine.seq.length+')',
               CVW/2,CVH-11);
 }
 
@@ -1942,7 +2405,7 @@ function drawHogueras(cam){
     } else {
       cx.font='700 13px Georgia'; cx.textAlign='center';
       cx.save(); cx.globalAlpha=.5+.35*Math.sin(simT*3);
-      inkText('copal', px, GROUND-H-14, GOLD, null, 3); cx.restore();
+      inkText(tr('copal'), px, GROUND-H-14, GOLD, null, 3); cx.restore();
     }
   });
 }
@@ -1999,11 +2462,48 @@ function casaRect(cam){
   const x0=CASA.x-(CASA.puerta.x0+CASA.puerta.x1)/2*W-cam, y0=GROUND-CASA.piso*H;
   return {x0,y0,W,H};
 }
+const casaLlama=()=>CASA.obvia && !sala.resuelto;
+/* haz de luz desde lo alto y piedras que se encienden en fila hacia la puerta */
+function drawFaro(cam){
+  const px=CASA.x-cam; if(px<-260||px>CVW+260) return;
+  /* ámbar y no blanco: el cielo de las láminas es papel claro y una luz pálida
+     no se veía encima */
+  const a=.16+.06*Math.sin(simT*1.7);
+  cx.save();
+  const g=cx.createLinearGradient(0,0,0,GROUND);
+  g.addColorStop(0,'rgba(232,150,45,0)'); g.addColorStop(.25,'rgba(232,150,45,'+a.toFixed(3)+')');
+  g.addColorStop(1,'rgba(240,170,60,'+(a*2).toFixed(3)+')');
+  cx.fillStyle=g; cx.beginPath();
+  cx.moveTo(px-46,0); cx.lineTo(px+46,0); cx.lineTo(px+120,GROUND); cx.lineTo(px-120,GROUND); cx.closePath(); cx.fill();
+  cx.restore();
+  for(let k=0;k<16;k++){                      // motas de oro que suben por el haz
+    const t2=(simT*.22+hsh(k,81))%1, x=px+(hsh(k,82)-.5)*150*(1-t2*.5)+Math.sin(simT*1.3+k)*8;
+    cx.save(); cx.globalAlpha=(1-t2)*.9*(t2*6<1?t2*6:1); cx.fillStyle=k%3?GOLDS:'#fff3d6';
+    cx.strokeStyle=GOLD; cx.lineWidth=1;
+    cx.translate(x,GROUND-20-t2*(GROUND-80)); cx.rotate(Math.PI/4);
+    const s=3.5+hsh(k,83)*3; cx.fillRect(-s/2,-s/2,s,s); cx.strokeRect(-s/2,-s/2,s,s); cx.restore();
+  }
+}
+function drawSendaCasa(cam){
+  const px=CASA.x-cam; if(px<-500||px>CVW+120) return;
+  for(let i=0;i<6;i++){                        // se encienden de la más lejana a la puerta
+    const x=px-420+i*66, on=.5+.5*Math.sin(simT*4-i*.9);
+    cx.save(); cx.globalAlpha=.35+.5*on;
+    const g=cx.createRadialGradient(x,GROUND-4,1,x,GROUND-4,34);
+    g.addColorStop(0,'rgba(240,160,50,.75)'); g.addColorStop(1,'rgba(240,160,50,0)');
+    cx.fillStyle=g; cx.fillRect(x-34,GROUND-38,68,50);
+    cx.globalAlpha=.95; cx.fillStyle=JADE; cx.strokeStyle=INK; cx.lineWidth=2;
+    cx.beginPath(); cx.ellipse(x,GROUND+1,12,4.5,0,0,7); cx.fill(); cx.stroke();
+    cx.restore();
+  }
+}
 function drawCasa(cam){
   if(!okP('templo')) return;
+  if(casaLlama()) drawFaro(cam);
   const r=casaRect(cam);
   if(r.x0>CVW+20||r.x0+r.W<-20) return;
   cx.drawImage(PR.templo,r.x0,r.y0,r.W,r.H);
+  if(casaLlama()) drawSendaCasa(cam);
   /* luz cálida DENTRO del vano: dice «aquí se entra» sin cartel */
   const px0=r.x0+CASA.puerta.x0*r.W, px1=r.x0+CASA.puerta.x1*r.W;
   const py0=r.y0+CASA.puerta.y0*r.H, py1=r.y0+CASA.puerta.y1*r.H;
@@ -2013,19 +2513,55 @@ function drawCasa(cam){
   g.addColorStop(0,'rgba(240,180,80,'+a+')'); g.addColorStop(1,'rgba(240,180,80,0)');
   cx.fillStyle=g; cx.fillRect(px0,py0,px1-px0,py1-py0); cx.restore();
 }
+/* cartucho de códice con el «?»: marco rojo, papel y glifo de oro */
+function cartuchoPregunta(x,y,s){
+  cx.save(); cx.translate(x,y); cx.scale(s,s);
+  cx.fillStyle='rgba(42,28,16,.25)'; cx.beginPath(); cx.ellipse(0,34,22,5,0,0,7); cx.fill();
+  cx.fillStyle=BONE; cx.strokeStyle=INK; cx.lineWidth=4;
+  cx.beginPath(); if(cx.roundRect) cx.roundRect(-24,-26,48,52,12); else cx.rect(-24,-26,48,52);
+  cx.fill(); cx.stroke();
+  cx.strokeStyle=RED; cx.lineWidth=2.5;
+  cx.beginPath(); if(cx.roundRect) cx.roundRect(-18,-20,36,40,8); else cx.rect(-18,-20,36,40); cx.stroke();
+  cx.textAlign='center'; cx.font='700 34px Georgia'; cx.fillStyle=GOLD;
+  cx.fillText('?',0,12); cx.restore();
+}
 function drawCasaAviso(cam){
   if(!okP('templo')) return;
   const r=casaRect(cam), px=CASA.x-cam;
+  const llama=casaLlama(), lejos=CASA.x-t.x;
+  /* la casa aún fuera de pantalla, por la derecha: aviso en el borde */
+  if(llama && px>CVW-10 && lejos<CVW*1.25){
+    const y=GROUND-190+Math.sin(simT*3)*6, x=CVW-44;
+    cartuchoPregunta(x-20,y,.8);
+    cx.save(); cx.fillStyle=RED; cx.strokeStyle=INK; cx.lineWidth=2.5;
+    cx.beginPath(); cx.moveTo(x+6,y-12); cx.lineTo(x+26,y); cx.lineTo(x+6,y+12); cx.closePath();
+    cx.fill(); cx.stroke(); cx.restore();
+    return;
+  }
   if(px<-200||px>CVW+200) return;
   if(casaCerca()){
     cx.save(); cx.textAlign='center';
     cx.globalAlpha=.6+.4*Math.sin(simT*4.5); cx.font='700 17px Georgia';
-    inkText(TOUCH?'TOCA LA PANTALLA PARA ENTRAR':'E  ·  ENTRAR EN LA CASA', px, r.y0-26, RED);
+    inkText(tr(TOUCH?'TOCA LA PANTALLA PARA ENTRAR':'E  ·  ENTRAR EN LA CASA'), px, r.y0-26, RED);
     cx.globalAlpha=1; cx.font='13px Georgia';
-    inkText(sala.resuelto?'la casa de los escribas':'dentro te espera un enigma', px, r.y0-6, INK, null, 3);
+    inkText(tr(sala.resuelto?'la casa de los escribas':'dentro te espera un enigma'), px, r.y0-6, INK, null, 3);
+    cx.restore();
+  } else if(llama){
+    /* la primera casa: cartucho grande sobre el tejado, nombre y flecha a la puerta */
+    const y=r.y0-50+Math.sin(simT*2.4)*6;
+    cartuchoPregunta(px,y,1.15+.06*Math.sin(simT*4));
+    cx.save(); cx.textAlign='center';
+    cx.font='700 16px Georgia'; inkText(tr('CASA DE LOS ESCRIBAS'), px, y+56, RED);
+    cx.font='italic 13px Georgia'; inkText(tr('dentro te espera un enigma'), px, y+74, INK, null, 3);
+    if(Math.abs(lejos)<420){
+      const fy=r.y0+CASA.puerta.y0*r.H-30+Math.abs(Math.sin(simT*4))*10;
+      cx.fillStyle=RED; cx.strokeStyle=INK; cx.lineWidth=2.5;
+      cx.beginPath(); cx.moveTo(px-13,fy-14); cx.lineTo(px+13,fy-14); cx.lineTo(px,fy+2); cx.closePath();
+      cx.fill(); cx.stroke();
+    }
     cx.restore();
   } else if(!sala.resuelto && Math.abs(t.x-CASA.x)<520){
-    /* de lejos, un glifo de pregunta flotando sobre la puerta llama la atención */
+    /* casas escondidas: sólo un glifo de pregunta sobre la puerta, de cerca */
     const y=r.y0+CASA.puerta.y0*r.H-22+Math.sin(simT*2.4)*5;
     cx.save(); cx.textAlign='center'; cx.font='700 26px Georgia';
     cx.globalAlpha=.75; inkText('?', px, y, GOLD, null, 5); cx.restore();
@@ -2127,7 +2663,7 @@ function drawSala(){
   cx.strokeStyle=INK; cx.lineWidth=3; cx.strokeRect(bx,by,bw,bh);
   cx.fillStyle=RED; cx.fillRect(bx+22,by-16,520,32); cx.strokeRect(bx+22,by-16,520,32);
   cx.fillStyle=GOLDS; cx.font='700 15px Georgia'; cx.textAlign='left';
-  cx.fillText(SALA_TEXTO.quien, bx+38, by+5);
+  cx.fillText(tr(SALA_TEXTO.quien), bx+38, by+5);
   cx.fillStyle=INK; cx.font='23px Georgia';
   const lineas=wrap(salaTexto(), bw-80);
   let quedan=Math.floor(sala.t*LETRAS_POR_SEG);
@@ -2146,16 +2682,16 @@ function drawSala(){
       cx.fillStyle=sel?RED:PAPER2; cx.strokeStyle=INK; cx.lineWidth=3;
       cx.fillRect(x,oy,ancho,46); cx.strokeRect(x,oy,ancho,46);
       cx.fillStyle=sel?GOLDS:INK; cx.font=(n>1?'700 26px':'700 20px')+' Georgia'; cx.textAlign='center';
-      cx.fillText(typeof it.label==='function'?it.label():it.label, x+ancho/2, oy+(n>1?33:30));
+      cx.fillText(typeof it.label==='function'?it.label():tr(it.label), x+ancho/2, oy+(n>1?33:30));
       cx.restore();
     });
     if(sala.fase==='enigma'){
       cx.save(); cx.textAlign='center'; cx.fillStyle='rgba(42,28,16,.6)'; cx.font='italic 14px Georgia';
-      cx.fillText(TOUCH?'toca tu respuesta':'←  →  para elegir   ·   ENTER para responder', CVW/2, by+bh-8); cx.restore();
+      cx.fillText(tr(TOUCH?'toca tu respuesta':'←  →  para elegir   ·   ENTER para responder'), CVW/2, by+bh-8); cx.restore();
     }
   } else if(salaCompleto()){
     cx.save(); cx.textAlign='right'; cx.fillStyle=RED; cx.globalAlpha=.5+.5*Math.sin(simT*5);
-    cx.font='700 16px Georgia'; cx.fillText(TOUCH?'toca para seguir  ▸':'ENTER para seguir  ▸', bx+bw-24, by+bh-18); cx.restore();
+    cx.font='700 16px Georgia'; cx.fillText(tr(TOUCH?'toca para seguir  ▸':'ENTER para seguir  ▸'), bx+bw-24, by+bh-18); cx.restore();
   }
 
   // salir
@@ -2163,7 +2699,7 @@ function drawSala(){
   cx.save(); cx.fillStyle='rgba(42,28,16,.7)'; cx.strokeStyle='rgba(230,205,139,.45)'; cx.lineWidth=1.5;
   cx.fillRect(s0.x,s0.y,s0.w,s0.h); cx.strokeRect(s0.x,s0.y,s0.w,s0.h);
   cx.fillStyle=GOLDS; cx.font='15px Georgia'; cx.textAlign='center';
-  cx.fillText(TOUCH?'←  salir':'←  salir (ESC)', s0.x+s0.w/2, s0.y+25); cx.restore();
+  cx.fillText(tr(TOUCH?'←  salir':'←  salir (ESC)'), s0.x+s0.w/2, s0.y+25); cx.restore();
 }
 
 /* ================= ENEMIGOS (dibujo) ================= */
@@ -2187,8 +2723,8 @@ function drawFoes(cam){
     cx.scale(e.face,1);
     let img=null, H=112;
     if(e.kind==='esq'){
-      if(e.state==='windup') img=FOE.ewind;
-      else if(e.state==='stab') img=FOE.eatk;
+      if(e.state==='windup'||e.state==='dashwind') img=FOE.ewind;
+      else if(e.state==='stab'||e.state==='dash') img=FOE.eatk;
       else { const i=Math.floor(e.t*(e.state==='chase'?11:5.5))%6; img=FOE['ew'+(i+1)]; }
     } else if(e.kind==='ara'){ H=EH.ara;
       if(dying) img=anim('ara_die',e.deadT,4,true);
@@ -2201,13 +2737,15 @@ function drawFoes(cam){
     } else if(e.kind==='ala'){ H=EH.ala;
       if(dying) img=anim('ala_die',e.deadT,3.6,true);
       else if(e.hitCd>0) img=anim('ala_hurt',.18-e.hitCd,14,true);
-      else if(e.state==='sting') img=anim('ala_sting',(.72-e.wt)/.72,5,true);
+      else if(e.state==='sting') img=anim('ala_sting',(ALA_PICA-e.wt)/ALA_PICA,5,true);
       else if(e.state==='guard'||e.state==='turning') img=anim('ala_guard',e.t,5);
       else img=anim('ala_walk',e.t,7);
     } else if(e.kind==='tec'){ H=EH.tec;
       if(dying) img=anim('tec_die',e.deadT,3.6,true);
       else if(e.hitCd>0) img=anim('tec_hurt',.18-e.hitCd,14,true);
       else if(e.state==='cry') img=anim('tec_cry',.95-e.wt,5);
+      else if(e.state==='picawind') img=anim('tec_cry',.45-e.pT,8);
+      else if(e.state==='picado') img=anim('tec_fly',e.t,20);
       else if(e.state==='perch') img=anim('tec_idle',e.t,3.5);
       else img=anim('tec_fly',e.t,11);
     }
@@ -2222,7 +2760,18 @@ function drawFoes(cam){
         line(sx+Math.cos(a)*7,sy+Math.sin(a)*7,sx+Math.cos(a)*16,sy+Math.sin(a)*16); }
       cx.restore();
     }
-    if(!dying && (e.state==='windup'||e.state==='cry'||e.state==='sting'||e.state==='spit')){
+    /* trazos de velocidad detrás de la embestida y del picado */
+    if(!dying && (e.state==='dash'||e.state==='picado')){
+      const vx=e.state==='dash'? e.face*600 : e.pvx, vy=e.state==='dash'? 0 : e.pvy;
+      const a=Math.atan2(vy,vx), ux=Math.cos(a), uy=Math.sin(a), cyy=e.y-(e.kind==='tec'?44:60);
+      cx.save(); cx.lineCap='round'; cx.globalAlpha=.7;
+      [[INK,3],[BONE,1.4]].forEach(([col,w])=>{ cx.strokeStyle=col; cx.lineWidth=w;
+        for(let i=-1;i<=1;i++){ const sx=px-ux*40-uy*i*16, sy=cyy-uy*40+ux*i*16;
+          line(sx,sy,sx-ux*(i?26:40),sy-uy*(i?26:40)); } });
+      cx.restore();
+    }
+    if(!dying && (e.state==='windup'||e.state==='cry'||e.state==='sting'||e.state==='spit'||
+                  e.state==='dashwind'||e.state==='picawind')){
       cx.font='700 22px Georgia'; cx.textAlign='center';
       inkText('!',px,e.y-(TOPY[e.kind]||60),RED);
     }
@@ -2230,7 +2779,7 @@ function drawFoes(cam){
     if(!dying && e.kind==='ala' && e.state==='turning'){
       cx.font='700 15px Georgia'; cx.textAlign='center';
       cx.save(); cx.globalAlpha=.55+.45*Math.sin(e.wt*20);
-      inkText('¡la espalda!',px,e.y-TOPY.ala-6,JADE);
+      inkText(tr('¡la espalda!'),px,e.y-TOPY.ala-6,JADE);
       cx.restore();
       cx.save(); cx.globalAlpha=.8; cx.strokeStyle=JADE; cx.lineWidth=2.5; cx.lineCap='round';
       const gy=e.y-EH.ala*.62, gr=13, a0=e.turnTo>0?3.5:5.9;
@@ -2351,7 +2900,7 @@ function drawBoss(cam){
     if((st==='eat'&&!boss.active)||st==='stun'){
       const pulso=.65+.35*Math.sin(boss.st*9);
       cx.save(); cx.globalAlpha=pulso; cx.font='700 17px Georgia';
-      inkText('¡AHORA!',px,(grounded?GROUND-158:boss.y-BOSS_H*.6)-12,RED);
+      inkText(tr('¡AHORA!'),px,(grounded?GROUND-158:boss.y-BOSS_H*.6)-12,RED);
       cx.restore(); }
   }
   drawFeathers(cam);
@@ -2362,7 +2911,8 @@ function snap(){ return { x:t.x, y:t.y, face:t.face, run:t.run,
   inAir:!t.onGround, charging:t.charging, charge:t.charge,
   dartCd:t.dartCd, hurtT:t.hurtT, vy:t.vy, duck:t.duck,
   squash:t.squash, stretch:t.stretch, vx:t.vx, animT:t.animT,
-  aim:t.aim, shotAim:t.shotAim, web:t.web, webF:t.webF, webLucha:t.webLucha }; }
+  aim:t.aim, shotAim:t.shotAim, web:t.web, webF:t.webF, webLucha:t.webLucha,
+  golpe:t.golpe, golpeT:t.golpeT, golpeRec:t.golpeRec, golpeN:t.golpeN, guardia:t.guardia }; }
 
 /* Selección de cuadro + movimiento procedural sobre el gráfico: rebote y bamboleo
    de zancada, tirón hacia atrás al recibir daño, retroceso al soplar. */
@@ -2378,6 +2928,21 @@ function drawSprite(o){
     /* ENVUELTO: cuadro propio de la hoja de telaraña. Va el primero de la cadena
        porque anula todo lo demás — ni agacharse, ni soplar, ni correr. */
     img = (okO('red2') && Math.sin(o.webF)>0)? OPT.red2 : OPT.red1;
+  }
+  else if(o.golpe>0 && o.hurtT<=0 && okO(GOLPES[o.golpe-1].k+'1')){
+    /* EL PUÑAL: cinco cuadros por golpe repartidos en su duración */
+    const G=GOLPES[o.golpe-1], f=Math.min(5,1+Math.floor(o.golpeT/G.dur*5));
+    img=pickO(G.k+f, G.k+'1');
+  }
+  else if(o.golpeRec>0 && o.hurtT<=0 && okO('rec1')){
+    /* recupera la guardia: los seis cuadros de «recuperación» en su medio instante */
+    const tot=GOLPE_REC*(o.golpeN===3?1.5:1);
+    img=pickO('rec'+Math.min(6,1+Math.floor((1-o.golpeRec/tot)*6)),'rec1');
+  }
+  else if(o.guardia>0 && !o.inAir && !o.charging && o.dartCd<=0 && !o.duck && Math.abs(o.vx)<=40 && okO('prep1')){
+    /* un rato después del combo, quieto, se queda EN GUARDIA con el puñal: dice que
+       el golpe está listo sin un cartel */
+    img=pickO('prep'+(1+Math.floor(o.animT*7)%5),'prep1');
   }
   else if(o.duck && okO('dk1')){
     /* AGACHADO: hoja propia de 9 cuadros (1-5 levanta y sopla · 6-9 apunta y sopla).
@@ -2433,7 +2998,7 @@ function drawSprite(o){
     cx.rotate(Math.sin(o.webF)*.05);
     cx.translate(Math.sin(o.webF*2.1)*(o.webLucha?2.2:.8),0);
   }
-  else if(!o.inAir && Math.abs(o.vx)>40 && o.hurtT<=0){
+  else if(!o.inAir && Math.abs(o.vx)>40 && o.hurtT<=0 && !o.golpe){
     const ph=o.run*P.cyc*Math.PI;
     cx.translate(0,-Math.abs(Math.sin(ph))*P.sprBob);
     cx.rotate(Math.sin(ph*2)*P.sprTilt);
@@ -2442,6 +3007,23 @@ function drawSprite(o){
   if(o.dartCd>.35 && !o.charging && o.shotAim==='frente') cx.translate(-3,0);   // retroceso sólo al frente
   if(o.charging && o.charge>=1) cx.translate((Math.random()-.5)*1.6,0);
   if(ok(img)) drawAnchored(img,H,ax);
+  cx.restore();
+}
+/* estela del puñal: trazo de tinta con filo de hueso (como las de velocidad del
+   jefe), sólo mientras el filo corta. La estocada es recta; los cortes, arcos. */
+function drawTajo(o,cam){
+  const G=GOLPES[o.golpe-1], p=o.golpeT/G.dur;
+  if(p<G.act[0]-.05 || p>G.act[1]+.15) return;
+  const k=Math.max(0,Math.min(1,(p-G.act[0])/(G.act[1]-G.act[0])));
+  cx.save(); cx.translate(o.x-cam,o.y); cx.scale(o.face,1);
+  cx.lineCap='round'; cx.globalAlpha=.85*(1-Math.max(0,p-G.act[1])/.15);
+  [[INK,4],[BONE,1.8]].forEach(([col,w])=>{ cx.strokeStyle=col; cx.lineWidth=w;
+    cx.beginPath();
+    if(o.golpe===1){ const y=-70; cx.moveTo(30+40*k,y); cx.lineTo(G.alc-4,y);
+                     cx.moveTo(40+40*k,y-9); cx.lineTo(G.alc-22,y-7); }
+    else if(o.golpe===2){ cx.ellipse(18,-66,G.alc-18,24,0,-.9+.3*k,.55+.5*k); }
+    else { cx.ellipse(26,-78,48,56,0,.9,.9-(.5+1.5*k),true); }       // de abajo hacia arriba
+    cx.stroke(); });
   cx.restore();
 }
 /* títere de papel: sólo si el arte no cargó, para que el juego nunca quede vacío */
@@ -2477,10 +3059,11 @@ function drawChar(o,cam){
     cx.beginPath(); cx.ellipse(0,3,24,5.5,0,0,7); cx.fill(); cx.restore(); }
   cx.scale(o.face,1);
   if(t.muerto) cx.rotate(-Math.min(1.4,t.muerteT*1.6));
-  cx.rotate(o.inAir?0 : (o.vx*o.face)/P.spd*.1);           // inclinación al correr
+  cx.rotate(o.inAir||o.golpe? 0 : (o.vx*o.face)/P.spd*.1);  // inclinación al correr
   const sq=1-o.squash*1.4+o.stretch*.9; cx.scale(2-sq,sq); // squash & stretch
   if(artOk()) drawSprite(o); else puppet(o);
   cx.restore();
+  if(o.golpe>0 && !t.muerto) drawTajo(o,cam);
   if(t.web>0 && !t.muerto && okO('red1')){  // hilos de anclaje: del capullo al suelo
     cx.save(); cx.translate(o.x-cam,o.y);
     cx.globalAlpha=Math.min(1,t.web*1.6)*.5;
@@ -2539,7 +3122,15 @@ function drawFx(cam){
   });
   darts.forEach(d=>{
     const ang=Math.atan2(d.vy||0, d.vx);           // el dardo apunta a donde vuela
-    if(okO('dart')){ const im=OPT.dart, H=6, W=im.width/im.height*H;
+    const c=d.carga||0;
+    if(c>.5){                                       // estela de oro: el soplo cargado
+      const L=30+60*c, ux=Math.cos(ang), uy=Math.sin(ang);
+      cx.save(); cx.lineCap='round'; cx.globalAlpha=.35+.4*c;
+      cx.strokeStyle=INK; cx.lineWidth=2+3*c; line(d.x-cam,d.y,d.x-cam-ux*L,d.y-uy*L);
+      cx.strokeStyle=GOLDS; cx.lineWidth=1+2*c; line(d.x-cam,d.y,d.x-cam-ux*L*.8,d.y-uy*L*.8);
+      cx.restore();
+    }
+    if(okO('dart')){ const im=OPT.dart, H=6*(1+.6*c), W=im.width/im.height*H;
       cx.save(); cx.translate(d.x-cam,d.y); cx.rotate(ang);
       cx.drawImage(im,-W/2,-H/2,W,H); cx.restore();
     } else { cx.strokeStyle=GOLD; cx.lineWidth=3;
@@ -2571,6 +3162,14 @@ function drawHUD(){
   cx.save();
   cx.fillStyle='rgba(42,28,16,.30)'; cx.fillRect(232,36,300,4);
   cx.fillStyle=GOLDS; cx.fillRect(232,36,300*prog,4);
+  /* la primera casa de enigmas, marcada en el camino hasta que se resuelve */
+  if(casaLlama() && !enArena){
+    const hx=232+300*Math.max(0,Math.min(1,(CASA.x-300)/(GATE_X-300)));
+    cx.fillStyle=BONE; cx.strokeStyle=INK; cx.lineWidth=1.5;
+    cx.beginPath(); cx.moveTo(hx,27); cx.lineTo(hx+7,38); cx.lineTo(hx,49); cx.lineTo(hx-7,38); cx.closePath();
+    cx.fill(); cx.stroke();
+    cx.fillStyle=GOLD; cx.font='700 11px Georgia'; cx.textAlign='center'; cx.fillText('?',hx,42);
+  }
   cx.fillStyle=RED; cx.beginPath(); cx.arc(232+300*prog,38,4.5,0,7); cx.fill();
   cx.strokeStyle=INK; cx.lineWidth=1.5; cx.stroke();
   cx.restore();
@@ -2578,7 +3177,7 @@ function drawHUD(){
   // — barra del jefe —
   if(boss && boss.active && !boss.dead){
     cx.textAlign='center'; cx.font='700 16px Georgia';
-    inkText('VUCUB CAQUIX · EL FALSO SOL', CVW/2, 34, RED);
+    inkText(tr('VUCUB CAQUIX · EL FALSO SOL'), CVW/2, 34, RED);
     cx.fillStyle='rgba(244,235,208,.9)'; cx.fillRect(CVW/2-222,42,444,13);
     cx.fillStyle='rgba(42,28,16,.45)'; cx.fillRect(CVW/2-220,44,440,9);
     cx.fillStyle=RED; cx.fillRect(CVW/2-220,44,440*Math.max(0,boss.hp/boss.maxhp),9);
@@ -2599,7 +3198,7 @@ function drawHUD(){
     cx.fillStyle=t.charge>=1?RED:GOLD; cx.fillRect(px-24,t.y-120,48*t.charge,3);
   }
   cx.textAlign='left'; cx.font='11px Georgia';
-  cx.fillStyle='rgba(42,28,16,.42)'; cx.fillText('ESC · pausa', 20, CVH-14);
+  cx.fillStyle='rgba(42,28,16,.42)'; if(!TOUCH) cx.fillText(tr('ESC · pausa'), 20, CVH-14);
 }
 
 /* ================= MENÚS ================= */
@@ -2613,7 +3212,7 @@ function drawMenu(y0){
   menu.rects=[];
   menu.items.forEach((it,i)=>{
     const y=y0+i*46, sel=i===menu.sel;
-    const label=typeof it.label==='function'? it.label() : it.label;
+    const label=typeof it.label==='function'? it.label() : tr(it.label);
     cx.font=(sel?'700 25px':'21px')+' Georgia';
     const w=Math.max(300,cx.measureText(label).width+90);
     menu.rects.push({x:CVW/2-w/2,y:y-27,w,h:40});
@@ -2658,34 +3257,39 @@ function drawFondoLamina(im,alpha){
   g.addColorStop(0,'rgba(13,9,5,.35)'); g.addColorStop(1,'rgba(13,9,5,.92)');
   cx.fillStyle=g; cx.fillRect(0,0,CVW,CVH);
 }
+/* etiquetas que cambian: se escriben ya traducidas (el menú no las vuelve a pasar por tr) */
+const etiquetaMusica=()=>tr('Música')+': '+tr(SND.on?'sí':'no');
+/* el idioma se nombra en los dos a la vez: quien no lee el que está puesto lo encuentra igual */
+const etiquetaIdioma=()=>LANG==='en'? 'Language / Idioma: English' : 'Idioma / Language: Español';
 function irPortada(){
   SCREEN='portada'; musPlay('intro');
   menuSet('POPOL VUH','Junajpú y el falso sol',[
     {label:'▶  Comenzar el relato', go:()=>cineStart('apertura')},
     {label:'Saltar a la selva',      go:()=>empezarPartida()},
     {label:'Controles',              go:()=>{ volverDe='portada'; SCREEN='controles'; }},
-    {label:()=>'Música: '+(SND.on?'sí':'no'), go:()=>{ SND.on=!SND.on; sndSave(); musRefresh(); }},
+    {label:etiquetaMusica, go:()=>{ SND.on=!SND.on; sndSave(); musRefresh(); }},
+    {label:etiquetaIdioma, go:cambiaIdioma},
   ]);
 }
 function drawPortada(){
   drawFondoLamina(CODEX[7],.42);
   cx.textAlign='center';
   cx.fillStyle='#b89a5e'; cx.font='700 15px Georgia';
-  cx.fillText('E L   L I B R O   D E L   C O N S E J O', CVW/2, 96);
+  cx.fillText(tr('E L   L I B R O   D E L   C O N S E J O'), CVW/2, 96);
   cx.save();
   cx.shadowColor='rgba(200,140,50,.55)'; cx.shadowBlur=42;
   cx.fillStyle='#e7d4a8'; cx.font='700 76px Georgia';
   cx.fillText('POPOL VUH', CVW/2, 176);
   cx.restore();
   cx.fillStyle='#c9b282'; cx.font='italic 24px Georgia';
-  cx.fillText('Junajpú y el falso sol', CVW/2, 214);
+  cx.fillText(tr('Junajpú y el falso sol'), CVW/2, 214);
   cx.strokeStyle='rgba(230,205,139,.35)'; cx.lineWidth=1.5;
   line(CVW/2-190,236,CVW/2+190,236);
-  drawMenu(320);
+  drawMenu(300);
   cx.fillStyle='rgba(201,168,106,.5)'; cx.font='12px Georgia';
-  cx.fillText('↑ ↓  elegir   ·   ENTER  aceptar   ·   también puedes hacer clic', CVW/2, CVH-64);
+  if(!TOUCH) cx.fillText(tr('↑ ↓  elegir   ·   ENTER  aceptar   ·   también puedes hacer clic'), CVW/2, CVH-64);
   cx.fillStyle='rgba(201,168,106,.32)'; cx.font='11px Georgia';
-  cx.fillText('demo jugable · primer pasaje · arte y música del proyecto', CVW/2, CVH-40);
+  cx.fillText(tr('demo jugable · primer pasaje · arte y música del proyecto'), CVW/2, CVH-40);
   cx.textAlign='right'; cx.fillStyle='rgba(201,168,106,.26)'; cx.font='10px Georgia';
   cx.fillText(VERSION, CVW-16, CVH-14);
   cx.textAlign='center';
@@ -2695,9 +3299,10 @@ const CONTROLES_TECLADO=[
   ['A · D   o   ← →','andar'],
   ['ESPACIO   o   Z','saltar'],
   ['K   o   X   (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
+  ['J   o   V','puñal: pulsa varias veces para encadenar tres golpes'],
   ['W · ↑    /    S · ↓   (mantener)','apuntar la cerbatana hacia arriba  /  hacia abajo'],
   ['C   o   L   (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
-  ['E  /  ENTER','entrar en casas  ·  atravesar la niebla de copal'],
+  ['E  /  ENTER','entrar en casas  ·  seguir el sendero del nance'],
   ['ESC  ·  M  ·  F','pausa  ·  música  ·  pantalla completa'],
 ];
 const CONTROLES_TACTIL=[
@@ -2705,16 +3310,19 @@ const CONTROLES_TACTIL=[
   ['joystick  ↑ / ↓  +  TIRO','disparar hacia arriba  /  hacia abajo'],
   ['SALTO','saltar'],
   ['TIRO  (mantener y soltar)','cerbatana — cuanto más cargas, más lejos y más fuerte'],
+  ['GOLPE','puñal: tócalo varias veces para encadenar tres golpes'],
   ['AGACH.  (mantener)','agacharse: no avanzas, pero disparas a ras de suelo'],
-  ['tocar la pantalla','entrar en casas · cruzar la niebla (cuando sale el aviso)'],
+  ['tocar la pantalla','entrar en casas · seguir el sendero (cuando sale el aviso)'],
   ['botones de arriba','pantalla completa y pausa'],
 ];
 const CONTROLES=TOUCH?CONTROLES_TACTIL:CONTROLES_TECLADO;
 const CONSEJOS=[
-  'Las ARAÑAS escupen telarañas: si te pegan, muévete para zafarte, o revienta la tela de un dardo.',
+  'Las ARAÑAS escupen telarañas: si te pegan, muévete para zafarte, o revienta la tela con un dardo o un tajo.',
   'Dispara HACIA ARRIBA al tecolote en su percha y a Vucub Caquix cuando vuela.',
-  'El ALACRÁN lleva pedernal de frente y su aguijón hace DOBLE daño. Sáltalo y dispárale por la espalda.',
-  'El TECOLOTE no pelea: grita y llama guardianes. Cállalo primero.',
+  'El ALACRÁN lleva pedernal de frente y su aguijón hace DOBLE daño. Sáltalo y hiérelo por la espalda.',
+  'El ESQUELETO embiste desde lejos: no retrocedas, sáltalo.',
+  'El TECOLOTE llama guardianes y se lanza en picado a donde vas: da la vuelta para esquivarlo.',
+  'El PUÑAL encadena tres golpes; su tajo corta telarañas y plumas en el aire.',
   'Los BRASEROS DE COPAL curan y son el sitio donde vuelves si caes.',
   'A Vucub Caquix se le embosca cuando BAJA a comer al suelo: ahí parpadea «¡ahora!».',
   'La SOMBRA ROJA marca dónde cae su picado. Su barrido rasante se esquiva SALTANDO.',
@@ -2723,41 +3331,42 @@ function drawControles(){
   drawFondoLamina(CODEX[1],.22);
   cx.textAlign='center';
   cx.fillStyle='#e7d4a8'; cx.font='700 36px Georgia';
-  cx.fillText('CONTROLES', CVW/2, 96);
+  cx.fillText(tr('CONTROLES'), CVW/2, 80);
   cx.textAlign='right';
+  /* ocho filas de mandos y nueve consejos: más apretado que antes para que quepan */
   CONTROLES.forEach((c,i)=>{
-    const y=150+i*38;
-    cx.fillStyle=GOLDS; cx.font='700 19px Georgia'; cx.fillText(c[0], CVW/2-26, y);
-    cx.textAlign='left'; cx.fillStyle='#c9b282'; cx.font='18px Georgia';
-    cx.fillText(c[1], CVW/2+26, y); cx.textAlign='right';
+    const y=126+i*32;
+    cx.fillStyle=GOLDS; cx.font='700 18px Georgia'; cx.fillText(tr(c[0]), CVW/2-26, y);
+    cx.textAlign='left'; cx.fillStyle='#c9b282'; cx.font='17px Georgia';
+    cx.fillText(tr(c[1]), CVW/2+26, y); cx.textAlign='right';
   });
   cx.textAlign='center';
-  cx.strokeStyle='rgba(230,205,139,.3)'; cx.lineWidth=1.5; line(CVW/2-260,410,CVW/2+260,410);
-  cx.fillStyle='#b89a5e'; cx.font='700 13px Georgia'; cx.fillText('DEL LIBRO', CVW/2, 436);
+  cx.strokeStyle='rgba(230,205,139,.3)'; cx.lineWidth=1.5; line(CVW/2-260,384,CVW/2+260,384);
+  cx.fillStyle='#b89a5e'; cx.font='700 13px Georgia'; cx.fillText(tr('DEL LIBRO'), CVW/2, 408);
   CONSEJOS.forEach((s,i)=>{
     cx.fillStyle='rgba(201,178,130,.9)'; cx.font='italic 15px Georgia';
-    cx.fillText(s, CVW/2, 464+i*24);
+    cx.fillText(tr(s), CVW/2, 434+i*25);
   });
   cx.fillStyle=GOLDS; cx.font='700 18px Georgia';
-  cx.fillText('ESC  ·  volver', CVW/2, CVH-28);
+  cx.fillText(TOUCH? tr('ESC  ·  volver').replace(/^ESC\s+·\s+/,'') : tr('ESC  ·  volver'), CVW/2, CVH-24);
 }
 
 function drawPausa(){
   drawPanelFondo(.78);
   cx.textAlign='center';
   cx.fillStyle='#e7d4a8'; cx.font='700 44px Georgia';
-  cx.fillText('EL LIBRO SE CIERRA', CVW/2, 150);
+  cx.fillText(tr('EL LIBRO SE CIERRA'), CVW/2, 150);
   cx.fillStyle='#b89a5e'; cx.font='italic 17px Georgia';
-  cx.fillText('· un momento ·', CVW/2, 182);
-  drawMenu(268);
+  cx.fillText(tr('· un momento ·'), CVW/2, 182);
+  drawMenu(250);
 }
 function drawMuerte(){
   drawPanelFondo(.80);
   cx.textAlign='center';
   cx.fillStyle=RED; cx.font='700 52px Georgia';
-  cx.fillText('HAS CAÍDO', CVW/2, 190);
+  cx.fillText(tr('HAS CAÍDO'), CVW/2, 190);
   cx.fillStyle='#c9b282'; cx.font='italic 19px Georgia';
-  cx.fillText('«No fueron derrotados del todo. Aún.»', CVW/2, 230);
+  cx.fillText(tr('«No fueron derrotados del todo. Aún.»'), CVW/2, 230);
   drawMenu(320);
 }
 function drawFinal(){
@@ -2765,17 +3374,18 @@ function drawFinal(){
   cx.textAlign='center';
   cx.save(); cx.shadowColor='rgba(200,140,50,.5)'; cx.shadowBlur=36;
   cx.fillStyle='#e7d4a8'; cx.font='700 46px Georgia';
-  cx.fillText('EL FALSO SOL HA CAÍDO', CVW/2, 138); cx.restore();
+  cx.fillText(tr('EL FALSO SOL HA CAÍDO'), CVW/2, 138); cx.restore();
   cx.fillStyle='#c9b282'; cx.font='italic 18px Georgia';
-  cx.fillText('Primer pasaje del Popol Vuh · demo jugable', CVW/2, 176);
+  cx.fillText(tr('Primer pasaje del Popol Vuh · demo jugable'), CVW/2, 176);
   cx.strokeStyle='rgba(230,205,139,.3)'; cx.lineWidth=1.5; line(CVW/2-220,200,CVW/2+220,200);
   const cr=[['Relato','Popol Vuh · libro del consejo k’iche’'],
             ['Arte, escenografías y música','proyecto Popol Vuh'],
             ['Primer enemigo derrotado','Vucub Caquix, el Siete Guacamayo']];
+  if(LANG==='en') cr.push(['Nombres en inglés','según la traducción de Allen J. Christenson']);
   cr.forEach((c,i)=>{
-    const y=236+i*38;
-    cx.textAlign='right'; cx.fillStyle='#8d764a'; cx.font='700 13px Georgia'; cx.fillText(c[0].toUpperCase(), CVW/2-20, y);
-    cx.textAlign='left';  cx.fillStyle='#c9b282'; cx.font='17px Georgia';    cx.fillText(c[1], CVW/2+20, y);
+    const y=232+i*36;
+    cx.textAlign='right'; cx.fillStyle='#8d764a'; cx.font='700 13px Georgia'; cx.fillText(tr(c[0]).toUpperCase(), CVW/2-20, y);
+    cx.textAlign='left';  cx.fillStyle='#c9b282'; cx.font='17px Georgia';    cx.fillText(tr(c[1]), CVW/2+20, y);
   });
   cx.textAlign='center';
   drawMenu(400);
@@ -2784,8 +3394,9 @@ function drawFinal(){
 /* ================= TRANSICIONES ================= */
 function empezarPartida(){
   VIDA_MAX=VIDA_BASE; poderes.jade=false; sala.resuelto=false; sala.intentos=0;
-  t.web=0; telas.length=0; avisoTela=false;
-  evento('partida_iniciada', {tactil: TOUCH});
+  t.web=0; telas.length=0; avisoTela=false; casaVista=false; casaAtras=false; avisoPedernal=false;
+  golpeCorta(); t.golpeN=0;
+  evento('partida_iniciada', {tactil: TOUCH, idioma: LANG});
   t.x=400; t.y=GROUND; t.vx=0; t.vy=0; t.face=1; t.onGround=true;
   t.hp=VIDA_MAX; t.inv=1; t.hurtT=0; t.charging=false; t.charge=0; t.dartCd=0;
   t.muerto=false; t.muerteT=0; t.run=0; t.jumpsLeft=P.jmax; t.duck=false;
@@ -2802,7 +3413,8 @@ function irPausa(){
     {label:'Continuar',                go:()=>{ SCREEN='juego'; }},
     {label:'Controles',                go:()=>{ volverDe='pausa'; SCREEN='controles'; }},
     {label:'Volver al último brasero', go:()=>revive()},
-    {label:()=>'Música: '+(SND.on?'sí':'no'), go:()=>{ SND.on=!SND.on; sndSave(); musRefresh(); }},
+    {label:etiquetaMusica, go:()=>{ SND.on=!SND.on; sndSave(); musRefresh(); }},
+    {label:etiquetaIdioma, go:cambiaIdioma},
     {label:'Salir a la portada',       go:()=>irPortada()},
   ]);
 }
@@ -2837,7 +3449,7 @@ function updJuego(raw){
     return;
   }
   control(dt); phys(dt);
-  if(enArena) updBoss(dt); else { updFoes(dt); updGate(dt); updHogueras(); updPistas(raw); }
+  if(enArena) updBoss(dt); else { updFoes(dt); updGate(dt); updHogueras(); updCasa(); updPistas(raw); }
   updProyectiles(dt);
   /* vencido el falso sol se deja ver la caída y arranca la cinemática del brazo */
   if(boss && boss.dead && boss.deadT>3.4) cineStart('brazo');
@@ -2944,6 +3556,25 @@ function frame(now){
   }
 }
 requestAnimationFrame(frame);
+
+/* En local: lista en la consola los textos que aún no tienen versión inglesa.
+   Recorre los datos (relatos, casa, pistas, mandos) y cada llamada a tr() o say() con texto fijo. */
+function revisaTraducciones(){
+  const todos=new Set();
+  const mete=v=>{ if(typeof v==='string') todos.add(v); else if(Array.isArray(v)) v.forEach(mete); };
+  [APERTURA,BRAZO,CIERRE].forEach(seq=>seq.forEach(p=>{ mete(p.n); mete(p.q); mete(p.w); }));
+  Object.values(SALA_TEXTO).forEach(v=>{ if(typeof v!=='number') mete(v); });
+  PISTAS.forEach(p=>{ mete(p.txt); mete(p.tap); });
+  CONTROLES_TECLADO.concat(CONTROLES_TACTIL).forEach(mete); CONSEJOS.forEach(mete);
+  const src=[...document.scripts].map(s=>s.textContent).join('\n');
+  for(const m of src.matchAll(/(?:tr|say)\('((?:[^'\\]|\\.)*)'/g)) todos.add(m[1].replace(/\\'/g,"'"));
+  for(const m of src.matchAll(/label:'((?:[^'\\]|\\.)*)'/g)) todos.add(m[1]);
+  const faltan=[...todos].filter(s=>s && !s.includes('(?:') && !/^[\d\s.,?]+$/.test(s) && EN[s]==null);
+  if(faltan.length) console.warn('[en] '+faltan.length+' textos sin traducir:\n'+faltan.join('\n'));
+  else console.info('[en] todos los textos tienen traducción');
+  return faltan;
+}
+if(VERSION==='dev') setTimeout(revisaTraducciones,0);
 
 /* ================= ARRANQUE ================= */
 const T0=Date.now();

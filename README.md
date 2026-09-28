@@ -12,12 +12,16 @@ contada con arte de códice.
 | `A` `D` o `←` `→` | andar |
 | `Espacio` o `Z` | saltar |
 | `K` o `X` (mantener y soltar) | cerbatana — cuanto más cargas, más lejos y más fuerte |
+| `J` o `V` | puñal: pulsa varias veces y encadenas tres golpes |
 | `W` / `↑` · `S` / `↓` (mantener) | apuntar la cerbatana hacia arriba · hacia abajo |
 | `C` o `L` (mantener) | agacharse: disparo a ras de suelo |
 | `E` / `Enter` | entrar por el sendero al claro del nance (y a las casas) |
 | `Esc` · `M` · `F` | pausa · silenciar música · pantalla completa |
 
-En móvil: gira el teléfono. Joystick a la izquierda para andar; joystick arriba o abajo + **Tiro** para disparar en esa dirección.
+En móvil: gira el teléfono. Joystick a la izquierda para andar; joystick arriba o abajo + **Tiro** para disparar en esa dirección. **Golpe** (el puñal) va encima de Tiro y Salto.
+
+**English:** choose *Language / Idioma* on the title screen, or play at
+https://jlmoguelru.github.io/popol-vuh/?lang=en
 
 ## El recorrido
 

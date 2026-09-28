@@ -21,6 +21,7 @@ CONTROLES
 A D  o  flechas izq/der .... andar
 ESPACIO  o  Z .............. saltar
 K  o  X (manten y suelta) .. cerbatana - cuanto mas cargas, mas lejos y mas fuerte
+J  o  V .................... punal: pulsa varias veces y encadenas tres golpes
 W / arriba  (manten) ....... apuntar la cerbatana hacia ARRIBA
 S / abajo   (manten) ....... apuntar la cerbatana hacia ABAJO
 C  o  L (manten) ........... agacharse: disparo a ras de suelo, contra las aranas
@@ -29,7 +30,7 @@ ESC ........ pausa    M .... silenciar musica    F .... pantalla completa
 
 En movil: gira el telefono. A la izquierda hay un joystick: de lado para andar
 (inclinado a medias caminas, a fondo corres), y ARRIBA o ABAJO + TIRO para
-disparar en esa direccion.
+disparar en esa direccion. A la derecha: GOLPE (punal) encima de TIRO y SALTO.
 Arriba a la derecha hay dos botones: pantalla completa y pausa. La pantalla
 completa es lo mas comodo, porque quita la barra del navegador.
 
@@ -43,6 +44,11 @@ Los BRASEROS DE COPAL curan y son el punto donde vuelves si caes.
 A Vucub Caquix se le embosca cuando BAJA a comer al suelo: ese primer dardo
 abre la pelea. Despues, aprovecha cuando pica y se estrella. Su picado te quita
 DOS corazones, asi que esquiva y dispara en las ventanas.
+
+IDIOMA / LANGUAGE
+-----------------
+En la portada: "Idioma / Language". Tambien con ?lang=en en la direccion.
+On the title screen: "Language / Idioma". Or add ?lang=en to the address.
 
 PUBLICARLO EN INTERNET
 ----------------------
